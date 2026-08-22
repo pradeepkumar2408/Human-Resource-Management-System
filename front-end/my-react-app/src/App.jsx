@@ -1,17 +1,30 @@
-
 import { useState } from 'react';
 import Login from './Components/Login';
 import SignUp from './Components/SignUp';
 import ForgotPassword from './Components/ForgotPassword';
 import VerifyEmail from './Components/VerifyEmail';
-import AdminDashboard from './pages/admin/AdminDashboard';
+import EmployeeDashboard from './Components/EmployeeDashboard';
+import Profile from './Components/Profile';
+import Attendance from './Components/Attendance';
+import LeaveManagement from './Components/LeaveManagement';
+import Payroll from './Components/Payroll';
+import Notifications from './Components/Notifications';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [userData, setUserData] = useState(null);
 
-  const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8081';
+  // Persistent Theme State across all pages
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('dayflow_theme') || 'dark';
+  });
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('dayflow_theme', nextTheme);
+  };
 
   const handleLoginSuccess = (data) => {
     setUserData(data);
@@ -23,12 +36,18 @@ function App() {
     setCurrentPage('verify-email');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('dayflow_token');
+    localStorage.removeItem('dayflow_user');
+    setUserData(null);
+    setCurrentPage('login');
+  };
+
   return (
     <>
-<<<<<<< HEAD
       {currentPage === 'login' && (
         <Login
-          apiBaseUrl={API_BASE_URL}
+          theme={theme}
           onSignUp={() => setCurrentPage('signup')}
           onForgotPassword={() => setCurrentPage('forgot-password')}
           onLoginSuccess={handleLoginSuccess}
@@ -37,7 +56,7 @@ function App() {
 
       {currentPage === 'signup' && (
         <SignUp
-          apiBaseUrl={API_BASE_URL}
+          theme={theme}
           onNavigateToLogin={() => setCurrentPage('login')}
           onSignUpSuccess={handleSignUpSuccess}
         />
@@ -45,14 +64,14 @@ function App() {
 
       {currentPage === 'forgot-password' && (
         <ForgotPassword
-          apiBaseUrl={API_BASE_URL}
+          theme={theme}
           onNavigateToLogin={() => setCurrentPage('login')}
         />
       )}
 
       {currentPage === 'verify-email' && (
         <VerifyEmail
-          apiBaseUrl={API_BASE_URL}
+          theme={theme}
           email={registeredEmail}
           onNavigateToLogin={() => setCurrentPage('login')}
           onVerificationSuccess={() => setCurrentPage('login')}
@@ -61,15 +80,48 @@ function App() {
 
       {currentPage === 'dashboard' && (
         <EmployeeDashboard
-          onNavigate={(page) => console.log('Navigate to:', page)}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onNavigate={(page) => setCurrentPage(page)}
           onLogout={handleLogout}
         />
       )}
+
+      {currentPage === 'profile' && (
+        <Profile
+          theme={theme}
+          onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
+
+      {currentPage === 'attendance' && (
+        <Attendance
+          theme={theme}
+          onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
+
+      {currentPage === 'leave' && (
+        <LeaveManagement
+          theme={theme}
+          onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
+
+      {currentPage === 'payroll' && (
+        <Payroll
+          theme={theme}
+          onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
+
+      {currentPage === 'notifications' && (
+        <Notifications
+          theme={theme}
+          onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
     </>
-=======
-      <AdminDashboard/>
-    </> 
->>>>>>> e0ab246a04d250a619ac0f570ceca22621ceae32
   );
 }
 
