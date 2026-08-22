@@ -6,7 +6,7 @@ import React, { useState } from 'react';
  * 3-Stage Password Reset Workflow:
  * Stage 1: User enters email -> Sends OTP to email via backend
  * Stage 2: User enters OTP code -> Verified by backend
- * Stage 3: Redirects to Set New Password screen -> Stores new password in DB via backend
+ * Stage 3: Dedicated Set New Password & Confirm Password Screen -> Stores new password in DB via backend
  * 
  * Styled 100% with INLINE CSS (no external .css dependencies).
  */
@@ -32,6 +32,26 @@ export default function ForgotPassword({
   const [focusedInput, setFocusedInput] = useState(null);
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);
   const [isBackHovered, setIsBackHovered] = useState(false);
+
+  // Password Strength Calculator for Step 3
+  const getPasswordRules = (pwd) => {
+    return {
+      length: pwd.length >= 8,
+      hasUpper: /[A-Z]/.test(pwd),
+      hasLower: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd)
+    };
+  };
+
+  const passwordRules = getPasswordRules(newPassword);
+  const passedRulesCount = Object.values(passwordRules).filter(Boolean).length;
+
+  const getStrengthLabel = () => {
+    if (!newPassword) return { text: '', color: '#71717A' };
+    if (passedRulesCount <= 2) return { text: 'Weak', color: '#EF4444' };
+    if (passedRulesCount === 3) return { text: 'Medium', color: '#F59E0B' };
+    return { text: 'Strong', color: '#10B981' };
+  };
 
   // STAGE 1: Send OTP to user email
   const handleSendOtp = async (e) => {
@@ -104,13 +124,12 @@ export default function ForgotPassword({
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        // Fallback check if endpoint returns token or success
         throw new Error(data?.message || data?.error || 'Invalid or expired OTP code.');
       }
 
       setVerifiedToken(data?.resetToken || data?.token || otpCode.trim());
-      setSuccessMessage('OTP verified successfully! Now set your new password.');
-      setStep(3); // Advance to Set Password stage
+      setSuccessMessage('OTP verified successfully! Please set your new password.');
+      setStep(3); // Advance to Set New Password screen
     } catch (err) {
       setErrorMessage(err.message || 'OTP verification failed. Please check the code.');
     } finally {
@@ -127,7 +146,10 @@ export default function ForgotPassword({
     } else if (newPassword.length < 8) {
       errors.newPassword = 'Password must be at least 8 characters';
     }
-    if (confirmPassword !== newPassword) {
+
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Confirm password is required';
+    } else if (confirmPassword !== newPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
 
@@ -161,7 +183,7 @@ export default function ForgotPassword({
         throw new Error(data?.message || data?.error || 'Failed to update password in database.');
       }
 
-      setSuccessMessage('Password reset & stored in database successfully! Redirecting to sign in...');
+      setSuccessMessage('New password successfully created and saved in database! Redirecting to sign in...');
       setTimeout(() => {
         if (onNavigateToLogin) onNavigateToLogin();
       }, 2000);
@@ -180,10 +202,6 @@ export default function ForgotPassword({
       minHeight: '100vh',
       width: '100%',
       backgroundColor: '#000000',
-      backgroundImage: `
-        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07) 0%, transparent 50%),
-        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.03) 0%, transparent 50%)
-      `,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -194,7 +212,7 @@ export default function ForgotPassword({
     },
     card: {
       width: '100%',
-      maxWidth: '430px',
+      maxWidth: '440px',
       backgroundColor: '#0A0A0A',
       border: '1px solid #262626',
       borderRadius: '20px',
@@ -344,6 +362,31 @@ export default function ForgotPassword({
       marginTop: '6px',
       display: 'block'
     },
+    strengthBarWrapper: {
+      marginTop: '10px'
+    },
+    strengthHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: '12px',
+      color: '#71717A',
+      marginBottom: '6px'
+    },
+    strengthTrack: {
+      height: '4px',
+      width: '100%',
+      backgroundColor: '#27272A',
+      borderRadius: '2px',
+      overflow: 'hidden',
+      display: 'flex',
+      gap: '4px'
+    },
+    strengthSegment: (index) => ({
+      flex: 1,
+      height: '100%',
+      backgroundColor: index < passedRulesCount ? getStrengthLabel().color : '#27272A',
+      transition: 'background-color 0.3s ease'
+    }),
     submitButton: {
       width: '100%',
       padding: '14px',
@@ -412,20 +455,20 @@ export default function ForgotPassword({
           <h1 style={styles.title}>
             {step === 1 && 'Forgot Password'}
             {step === 2 && 'Verify OTP Code'}
-            {step === 3 && 'Set New Password'}
+            {step === 3 && 'Create New Password'}
           </h1>
           <p style={styles.subtitle}>
-            {step === 1 && "Enter your registered email to receive an OTP code."}
-            {step === 2 && `Enter the OTP code sent to ${email}`}
-            {step === 3 && "Create and confirm your new password to store in the database."}
+            {step === 1 && "Enter your registered email address to receive an OTP code."}
+            {step === 2 && `Enter the 6-digit OTP code sent to ${email}`}
+            {step === 3 && "OTP verified! Please set your new password and confirm it."}
           </p>
         </div>
 
         {/* Step Indicator Badges */}
         <div style={styles.stepBadges}>
-          <span style={styles.stepPill(step === 1)}>1. Send OTP</span>
-          <span style={styles.stepPill(step === 2)}>2. Verify OTP</span>
-          <span style={styles.stepPill(step === 3)}>3. Set Password</span>
+          <span style={styles.stepPill(step === 1)}>1. Email</span>
+          <span style={styles.stepPill(step === 2)}>2. OTP Code</span>
+          <span style={styles.stepPill(step === 3)}>3. New Password</span>
         </div>
 
         {/* Error Banner */}
@@ -503,7 +546,7 @@ export default function ForgotPassword({
         {step === 2 && (
           <form onSubmit={handleVerifyOtp} noValidate>
             <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="otpCode">Enter OTP Code</label>
+              <label style={styles.label} htmlFor="otpCode">Enter 6-Digit OTP Code</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.inputIconLeft}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -513,7 +556,7 @@ export default function ForgotPassword({
                 <input
                   id="otpCode"
                   type="text"
-                  placeholder="Enter 6-digit OTP"
+                  placeholder="Enter OTP (e.g. 123456)"
                   value={otpCode}
                   onChange={(e) => { setOtpCode(e.target.value); setErrorMessage(''); }}
                   onFocus={() => setFocusedInput('otpCode')}
@@ -540,15 +583,16 @@ export default function ForgotPassword({
                   <span>Verifying OTP...</span>
                 </>
               ) : (
-                <span>Verify OTP</span>
+                <span>Verify OTP & Continue</span>
               )}
             </button>
           </form>
         )}
 
-        {/* STAGE 3: Set & Store New Password */}
+        {/* STAGE 3: Dedicated "Set New Password & Confirm Password" Screen */}
         {step === 3 && (
           <form onSubmit={handleSetNewPassword} noValidate>
+            {/* New Password */}
             <div style={styles.formGroup}>
               <label style={styles.label} htmlFor="newPassword">New Password</label>
               <div style={styles.inputWrapper}>
@@ -561,7 +605,7 @@ export default function ForgotPassword({
                 <input
                   id="newPassword"
                   type={showNewPassword ? 'text' : 'password'}
-                  placeholder="Min. 8 characters"
+                  placeholder="Minimum 8 characters"
                   value={newPassword}
                   onChange={(e) => { setNewPassword(e.target.value); setErrorMessage(''); }}
                   onFocus={() => setFocusedInput('newPassword')}
@@ -573,6 +617,7 @@ export default function ForgotPassword({
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                   style={styles.passwordToggleBtn}
+                  title={showNewPassword ? 'Hide password' : 'Show password'}
                 >
                   {showNewPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -590,8 +635,27 @@ export default function ForgotPassword({
               {validationErrors.newPassword && (
                 <span style={styles.fieldErrorText}>{validationErrors.newPassword}</span>
               )}
+
+              {/* Strength Meter for New Password */}
+              {newPassword && (
+                <div style={styles.strengthBarWrapper}>
+                  <div style={styles.strengthHeader}>
+                    <span>Password strength</span>
+                    <span style={{ color: getStrengthLabel().color, fontWeight: '600' }}>
+                      {getStrengthLabel().text}
+                    </span>
+                  </div>
+                  <div style={styles.strengthTrack}>
+                    <div style={styles.strengthSegment(0)} />
+                    <div style={styles.strengthSegment(1)} />
+                    <div style={styles.strengthSegment(2)} />
+                    <div style={styles.strengthSegment(3)} />
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Confirm New Password */}
             <div style={styles.formGroup}>
               <label style={styles.label} htmlFor="confirmPassword">Confirm New Password</label>
               <div style={styles.inputWrapper}>
@@ -616,6 +680,7 @@ export default function ForgotPassword({
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={styles.passwordToggleBtn}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -635,6 +700,7 @@ export default function ForgotPassword({
               )}
             </div>
 
+            {/* Save Password Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -645,10 +711,10 @@ export default function ForgotPassword({
               {isLoading ? (
                 <>
                   <div style={styles.spinner} />
-                  <span>Storing password in database...</span>
+                  <span>Saving new password...</span>
                 </>
               ) : (
-                <span>Set & Store Password</span>
+                <span>Save New Password & Sign In</span>
               )}
             </button>
           </form>
