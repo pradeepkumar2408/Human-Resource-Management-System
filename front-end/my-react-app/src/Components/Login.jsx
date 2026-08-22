@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 /**
- * Login.jsx - Dayflow HRMS (Deel.com Theme)
+ * Login.jsx - Dayflow HRMS (Black & White Minimalist Theme)
  * 
  * Role-Based Login Component styled completely with INLINE CSS (no external .css dependencies).
  * Sends user credentials directly to the backend API for verification.
@@ -86,13 +86,12 @@ export default function Login({
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        // Backend verification failed (e.g. invalid credentials, inactive user)
+        // Backend verification failed
         const serverError = data?.message || data?.error || 'Invalid credentials or backend connection failed.';
         throw new Error(serverError);
       }
 
       // Successful verification from backend
-      // Store JWT token and user profile returned by backend
       const token = data?.token || data?.jwt || data?.accessToken;
       if (token) {
         localStorage.setItem('dayflow_token', token);
@@ -101,11 +100,9 @@ export default function Login({
         localStorage.setItem('dayflow_user', JSON.stringify(data.user || data));
       }
 
-      // Trigger callback if provided by parent App/Router
       if (onLoginSuccess) {
         onLoginSuccess(data);
       } else {
-        // Fallback default navigation behavior
         console.log('Login successful:', data);
         window.dispatchEvent(new CustomEvent('dayflow_login_success', { detail: data }));
       }
@@ -117,17 +114,16 @@ export default function Login({
   };
 
   // ==========================================
-  // INLINE STYLES (Deel.com Aesthetic)
+  // INLINE STYLES (Black & White Theme)
   // ==========================================
   const styles = {
     pageContainer: {
       minHeight: '100vh',
       width: '100%',
-      backgroundColor: '#0A0E17',
+      backgroundColor: '#000000',
       backgroundImage: `
-        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
-        radial-gradient(circle at 85% 80%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
-        radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, transparent 100%)
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07) 0%, transparent 50%),
+        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.03) 0%, transparent 50%)
       `,
       display: 'flex',
       alignItems: 'center',
@@ -135,18 +131,16 @@ export default function Login({
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       padding: '24px',
       boxSizing: 'border-box',
-      color: '#F8FAFC'
+      color: '#FFFFFF'
     },
     card: {
       width: '100%',
-      maxWidth: '440px',
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '24px',
+      maxWidth: '420px',
+      backgroundColor: '#0A0A0A',
+      border: '1px solid #262626',
+      borderRadius: '20px',
       padding: '40px 36px',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05)',
       boxSizing: 'border-box'
     },
     headerSection: {
@@ -160,25 +154,23 @@ export default function Login({
       marginBottom: '20px'
     },
     logoBadge: {
-      width: '42px',
-      height: '42px',
-      borderRadius: '12px',
-      background: 'linear-gradient(135deg, #6366F1 0%, #7C3AED 100%)',
+      width: '40px',
+      height: '40px',
+      borderRadius: '10px',
+      backgroundColor: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.5)'
+      boxShadow: '0 4px 12px rgba(255, 255, 255, 0.15)'
     },
     logoText: {
       fontSize: '24px',
       fontWeight: '800',
       letterSpacing: '-0.5px',
-      background: 'linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent'
+      color: '#FFFFFF'
     },
     title: {
-      fontSize: '26px',
+      fontSize: '24px',
       fontWeight: '700',
       color: '#FFFFFF',
       margin: '0 0 8px 0',
@@ -186,21 +178,21 @@ export default function Login({
     },
     subtitle: {
       fontSize: '14px',
-      color: '#94A3B8',
+      color: '#A1A1AA',
       margin: '0',
       lineHeight: '1.5'
     },
     errorBanner: {
-      backgroundColor: 'rgba(239, 68, 68, 0.12)',
-      border: '1px solid rgba(239, 68, 68, 0.3)',
-      borderRadius: '12px',
+      backgroundColor: '#18181B',
+      border: '1px solid #52525B',
+      borderRadius: '10px',
       padding: '12px 16px',
       marginBottom: '24px',
       display: 'flex',
       alignItems: 'center',
       gap: '10px',
       fontSize: '13px',
-      color: '#FCA5A5',
+      color: '#FAFAFA',
       lineHeight: '1.4'
     },
     formGroup: {
@@ -210,7 +202,7 @@ export default function Login({
       display: 'block',
       fontSize: '13px',
       fontWeight: '600',
-      color: '#E2E8F0',
+      color: '#E4E4E7',
       marginBottom: '8px',
       letterSpacing: '0.2px'
     },
@@ -222,26 +214,26 @@ export default function Login({
     input: (fieldName) => ({
       width: '100%',
       padding: '12px 42px 12px 40px',
-      backgroundColor: 'rgba(30, 41, 59, 0.6)',
+      backgroundColor: '#121212',
       border: validationErrors[fieldName]
-        ? '1px solid #EF4444'
+        ? '1px solid #FFFFFF'
         : focusedInput === fieldName
-        ? '1px solid #6366F1'
-        : '1px solid rgba(255, 255, 255, 0.12)',
-      borderRadius: '12px',
+        ? '1px solid #FFFFFF'
+        : '1px solid #27272A',
+      borderRadius: '10px',
       fontSize: '14px',
       color: '#FFFFFF',
       outline: 'none',
       boxSizing: 'border-box',
       transition: 'all 0.2s ease',
       boxShadow: focusedInput === fieldName
-        ? '0 0 0 3px rgba(99, 102, 241, 0.25)'
+        ? '0 0 0 2px rgba(255, 255, 255, 0.2)'
         : 'none'
     }),
     inputIconLeft: {
       position: 'absolute',
       left: '14px',
-      color: '#64748B',
+      color: '#71717A',
       display: 'flex',
       alignItems: 'center',
       pointerEvents: 'none'
@@ -251,7 +243,7 @@ export default function Login({
       right: '14px',
       background: 'none',
       border: 'none',
-      color: '#94A3B8',
+      color: '#71717A',
       cursor: 'pointer',
       padding: '4px',
       display: 'flex',
@@ -261,7 +253,7 @@ export default function Login({
     },
     fieldErrorText: {
       fontSize: '12px',
-      color: '#FCA5A5',
+      color: '#A1A1AA',
       marginTop: '6px',
       display: 'block'
     },
@@ -275,26 +267,24 @@ export default function Login({
       border: 'none',
       fontSize: '13px',
       fontWeight: '500',
-      color: isForgotHovered ? '#818CF8' : '#6366F1',
+      color: isForgotHovered ? '#FFFFFF' : '#A1A1AA',
       cursor: 'pointer',
       padding: '0',
-      textDecoration: 'none',
-      transition: 'color 0.2s ease'
+      textDecoration: isForgotHovered ? 'underline' : 'none',
+      transition: 'all 0.2s ease'
     },
     submitButton: {
       width: '100%',
       padding: '14px',
-      background: isSubmitHovered && !isLoading
-        ? 'linear-gradient(135deg, #4F46E5 0%, #6D28D9 100%)'
-        : 'linear-gradient(135deg, #6366F1 0%, #7C3AED 100%)',
-      color: '#FFFFFF',
+      backgroundColor: isSubmitHovered && !isLoading ? '#E4E4E7' : '#FFFFFF',
+      color: '#000000',
       border: 'none',
-      borderRadius: '12px',
+      borderRadius: '10px',
       fontSize: '15px',
-      fontWeight: '600',
+      fontWeight: '700',
       cursor: isLoading ? 'not-allowed' : 'pointer',
       opacity: isLoading ? 0.75 : 1,
-      boxShadow: '0 10px 20px -5px rgba(99, 102, 241, 0.4)',
+      boxShadow: '0 4px 14px rgba(255, 255, 255, 0.15)',
       transition: 'all 0.2s ease',
       display: 'flex',
       alignItems: 'center',
@@ -304,8 +294,8 @@ export default function Login({
     spinner: {
       width: '16px',
       height: '16px',
-      border: '2px solid rgba(255, 255, 255, 0.3)',
-      borderTop: '2px solid #FFFFFF',
+      border: '2px solid rgba(0, 0, 0, 0.2)',
+      borderTop: '2px solid #000000',
       borderRadius: '50%',
       animation: 'dayflowSpin 0.8s linear infinite'
     },
@@ -313,23 +303,24 @@ export default function Login({
       marginTop: '28px',
       textAlign: 'center',
       fontSize: '14px',
-      color: '#94A3B8'
+      color: '#71717A'
     },
     signUpBtn: {
       background: 'none',
       border: 'none',
-      color: isSignUpHovered ? '#818CF8' : '#6366F1',
+      color: isSignUpHovered ? '#FFFFFF' : '#D4D4D8',
       fontWeight: '600',
       cursor: 'pointer',
       padding: '0 0 0 6px',
       fontSize: '14px',
-      transition: 'color 0.2s ease'
+      textDecoration: isSignUpHovered ? 'underline' : 'none',
+      transition: 'all 0.2s ease'
     }
   };
 
   return (
     <div style={styles.pageContainer}>
-      {/* Inject keyframes for spinner using inline style tag */}
+      {/* Keyframe animation for loading spinner */}
       <style>{`
         @keyframes dayflowSpin {
           0% { transform: rotate(0deg); }
@@ -339,7 +330,7 @@ export default function Login({
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus {
           -webkit-text-fill-color: #FFFFFF !important;
-          -webkit-box-shadow: 0 0 0px 1000px #1E293B inset !important;
+          -webkit-box-shadow: 0 0 0px 1000px #121212 inset !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>
@@ -349,7 +340,7 @@ export default function Login({
         <div style={styles.headerSection}>
           <div style={styles.logoContainer}>
             <div style={styles.logoBadge}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#FFFFFF' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
                 <circle cx="9" cy="7" r="4"></circle>
                 <polyline points="16 11 18 13 22 9"></polyline>
@@ -364,7 +355,7 @@ export default function Login({
         {/* Global Error Banner from Backend API */}
         {errorMessage && (
           <div style={styles.errorBanner}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FAFAFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
