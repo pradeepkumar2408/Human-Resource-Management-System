@@ -22,7 +22,7 @@ public class LeaveRequest {
     private Long id;
 
     @Column(name = "EMPLOYEE_ID", nullable = false)
-    private Long employeeId;
+    private String employeeId;
 
     @Column(name = "START_DATE", nullable = false)
     private LocalDate startDate;

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class LeaveRequestResponse {
 
     private Long id;
-    private Long employeeId;
+    private String employeeId;
     private LocalDate startDate;
     private LocalDate endDate;
     private String leaveTypeName;

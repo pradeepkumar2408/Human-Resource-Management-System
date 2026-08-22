@@ -62,7 +62,7 @@ public class LeaveServiceImpl implements LeaveService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LeaveRequestResponse> getLeavesByEmployeeId(Long employeeId) {
+    public List<LeaveRequestResponse> getLeavesByEmployeeId(String employeeId) {
         return leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId)
                 .stream()
                 .map(LeaveRequestResponse::fromEntity)
@@ -71,10 +71,10 @@ public class LeaveServiceImpl implements LeaveService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LeaveRequestResponse> getAllLeaves(Long employeeId, String status, String type, LocalDate startDate, LocalDate endDate) {
+    public List<LeaveRequestResponse> getAllLeaves(String employeeId, String status, String type, LocalDate startDate, LocalDate endDate) {
         Specification<LeaveRequest> spec = Specification.where(null);
 
-        if (employeeId != null) {
+        if (employeeId != null && !employeeId.trim().isEmpty()) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("employeeId"), employeeId));
         }
 

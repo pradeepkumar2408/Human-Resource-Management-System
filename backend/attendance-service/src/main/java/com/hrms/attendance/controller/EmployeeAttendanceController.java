@@ -36,7 +36,7 @@ public class EmployeeAttendanceController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<AttendanceDto>> getMyAttendance(@RequestParam("employeeId") Long employeeId) {
+    public ResponseEntity<List<AttendanceDto>> getMyAttendance(@RequestParam("employeeId") String employeeId) {
         List<AttendanceDto> history = attendanceService.getEmployeeHistory(employeeId);
         return ResponseEntity.ok(history);
     }

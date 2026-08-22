@@ -14,9 +14,9 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long>, JpaSpecificationExecutor<Attendance> {
 
-    Optional<Attendance> findByEmployeeIdAndWorkDate(Long employeeId, LocalDate workDate);
+    Optional<Attendance> findByEmployeeIdAndWorkDate(String employeeId, LocalDate workDate);
 
-    List<Attendance> findByEmployeeIdOrderByWorkDateDesc(Long employeeId);
+    List<Attendance> findByEmployeeIdOrderByWorkDateDesc(String employeeId);
 
     @Query("SELECT a.status.statusCode, COUNT(a) FROM Attendance a WHERE a.workDate = :workDate GROUP BY a.status.statusCode")
     List<Object[]> countStatusByWorkDate(@Param("workDate") LocalDate workDate);

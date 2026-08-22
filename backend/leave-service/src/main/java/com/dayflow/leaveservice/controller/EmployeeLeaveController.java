@@ -30,11 +30,11 @@ public class EmployeeLeaveController {
 
     @GetMapping("/me")
     public ResponseEntity<List<LeaveRequestResponse>> getMyLeaves(
-            @RequestHeader(value = "X-Employee-Id", required = false) Long headerEmployeeId,
-            @RequestParam(value = "employeeId", required = false) Long paramEmployeeId) {
+            @RequestHeader(value = "X-Employee-Id", required = false) String headerEmployeeId,
+            @RequestParam(value = "employeeId", required = false) String paramEmployeeId) {
         
-        Long employeeId = (headerEmployeeId != null) ? headerEmployeeId : paramEmployeeId;
-        if (employeeId == null) {
+        String employeeId = (headerEmployeeId != null && !headerEmployeeId.trim().isEmpty()) ? headerEmployeeId : paramEmployeeId;
+        if (employeeId == null || employeeId.trim().isEmpty()) {
             throw new IllegalArgumentException("Employee ID must be provided in 'X-Employee-Id' header or 'employeeId' query parameter");
         }
         

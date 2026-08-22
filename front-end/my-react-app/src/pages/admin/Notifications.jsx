@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE_URL = 'http://localhost:8111/api';
+
 export default function Notifications({ notifications, setNotifications, darkMode, colors }) {
   // Broadcaster State
   const [title, setTitle] = useState('');
@@ -130,26 +132,49 @@ export default function Notifications({ notifications, setNotifications, darkMod
     }
   };
 
-  const handleComposeSubmit = (e) => {
+  const handleComposeSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       alert('Announcement Title and Message Content are required fields.');
       return;
     }
 
-    const newAlert = {
-      id: `ALERT_${Date.now()}`,
+    const payload = {
+      employeeId: 'ALL',
       title: title.trim(),
       message: content.trim(),
-      type: category,
-      timestamp: 'Just Now',
-      isBroadcast: true
+      type: category.toUpperCase()
     };
 
-    setNotifications(prev => [newAlert, ...prev]);
-    setTitle('');
-    setContent('');
-    alert('Broadcast Bulletin successfully compiled and published to Notice Board!');
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Keep local compatibility
+        const newAlert = {
+          id: data.id,
+          title: data.title,
+          message: data.message,
+          type: data.type.charAt(0) + data.type.slice(1).toLowerCase(),
+          timestamp: 'Just Now',
+          isBroadcast: true
+        };
+        setNotifications(prev => [newAlert, ...prev]);
+        setTitle('');
+        setContent('');
+        alert('Broadcast Bulletin successfully compiled and published to Notice Board!');
+      } else {
+        alert('Failed to publish announcement to Notice Board.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   const handleDeleteAlert = (id) => {

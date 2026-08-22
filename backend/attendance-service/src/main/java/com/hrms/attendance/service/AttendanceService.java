@@ -6,9 +6,6 @@ import com.hrms.attendance.model.AttendanceStatus;
 import com.hrms.attendance.repository.AttendanceRepository;
 import com.hrms.attendance.repository.AttendanceStatusRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -96,7 +93,7 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AttendanceDto> getEmployeeHistory(Long employeeId) {
+    public List<AttendanceDto> getEmployeeHistory(String employeeId) {
         return attendanceRepository.findByEmployeeIdOrderByWorkDateDesc(employeeId)
                 .stream()
                 .map(this::mapToDto)
@@ -104,8 +101,7 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AttendanceDto> getDailyAttendance(LocalDate date, Long departmentId, String statusCode, Long employeeId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public List<AttendanceDto> getDailyAttendance(LocalDate date, Long departmentId, String statusCode, String employeeId) {
         Specification<Attendance> spec = Specification.where(null);
 
         if (date != null) {
@@ -117,11 +113,13 @@ public class AttendanceService {
         if (statusCode != null && !statusCode.trim().isEmpty()) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status").get("statusCode"), statusCode));
         }
-        if (employeeId != null) {
+        if (employeeId != null && !employeeId.trim().isEmpty()) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("employeeId"), employeeId));
         }
 
-        return attendanceRepository.findAll(spec, pageable).map(this::mapToDto);
+        return attendanceRepository.findAll(spec).stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional

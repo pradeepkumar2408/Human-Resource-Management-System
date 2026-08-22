@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 public class CheckOutRequest {
 
     @NotNull(message = "Employee ID is required")
-    private Long employeeId;
+    private String employeeId;
 }

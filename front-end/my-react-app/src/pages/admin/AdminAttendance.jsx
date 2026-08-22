@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE_URL = 'http://localhost:8111/api';
+
 export default function AdminAttendance({ attendance, setAttendance, employees, darkMode, colors }) {
   // Filters state
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
@@ -203,28 +205,77 @@ export default function AdminAttendance({ attendance, setAttendance, employees, 
     setIsCorrecting(true);
   };
 
-  const handleSaveCorrection = (e) => {
+  const handleSaveCorrection = async (e) => {
     e.preventDefault();
     if (!correctionData.auditRemark.trim()) {
       alert('An audit remark explanation is mandatory to correct attendance records.');
       return;
     }
 
-    setAttendance(prev => prev.map(rec => {
-      if (rec.id === activeRecord.id || (rec.attendanceId && rec.attendanceId === activeRecord.attendanceId)) {
-        return {
-          ...rec,
-          status: correctionData.status,
-          checkInTime: correctionData.status === 'Absent' ? '--' : correctionData.checkInTime,
-          checkOutTime: correctionData.status === 'Absent' ? '--' : correctionData.checkOutTime,
-          remarks: `Admin Corrected: "${correctionData.auditRemark}"`
-        };
+    const parseTimeToDateTimeString = (dateStr, timeStr) => {
+      if (!timeStr) return null;
+      if (timeStr.includes('T')) return timeStr;
+      
+      let hours = 9;
+      let minutes = 0;
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (match) {
+        hours = parseInt(match[1], 10);
+        minutes = parseInt(match[2], 10);
+        const ampm = match[3];
+        if (ampm) {
+          if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+          if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
       }
-      return rec;
-    }));
+      
+      const paddedHours = String(hours).padStart(2, '0');
+      const paddedMinutes = String(minutes).padStart(2, '0');
+      return `${dateStr}T${paddedHours}:${paddedMinutes}:00`;
+    };
 
-    setIsCorrecting(false);
-    setActiveRecord(null);
+    const workDate = activeRecord.workDate || activeRecord.date || new Date().toISOString().split('T')[0];
+    const recId = activeRecord.attendanceId || activeRecord.id;
+
+    const payload = {
+      checkIn: correctionData.status === 'Absent' ? null : parseTimeToDateTimeString(workDate, correctionData.checkInTime),
+      checkOut: (correctionData.status === 'Absent' || !correctionData.checkOutTime) ? null : parseTimeToDateTimeString(workDate, correctionData.checkOutTime),
+      auditRemark: correctionData.auditRemark.trim(),
+      statusCode: correctionData.status.toUpperCase()
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/attendance/${recId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        setAttendance(prev => prev.map(rec => {
+          if (rec.id === recId || (rec.attendanceId && rec.attendanceId === recId)) {
+            // Keep local compatibility
+            return {
+              ...rec,
+              ...saved,
+              status: saved.statusCode.charAt(0) + saved.statusCode.slice(1).toLowerCase(),
+              remarks: `Admin Corrected: "${correctionData.auditRemark}"`
+            };
+          }
+          return rec;
+        }));
+        setIsCorrecting(false);
+        setActiveRecord(null);
+        alert('Attendance corrected successfully in database.');
+      } else {
+        const errData = await res.json().catch(() => null);
+        alert(errData?.message || 'Failed to update attendance correction.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   return (

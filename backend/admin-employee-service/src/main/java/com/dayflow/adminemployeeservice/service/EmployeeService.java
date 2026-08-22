@@ -8,8 +8,9 @@ public interface EmployeeService {
     EmployeeResponse onboardEmployee(EmployeeOnboardRequest request);
     EmployeeResponse updateEmployee(String id, EmployeeUpdateRequest request);
     EmployeeResponse getEmployeeById(String id);
-    Page<EmployeeResponse> getEmployees(String firstName, String lastName, Long departmentId, Long designationId, Boolean isActive, Pageable pageable);
+    java.util.List<EmployeeResponse> getEmployees(String firstName, String lastName, Long departmentId, Long designationId, Boolean isActive);
     void updateEmployeeStatus(String id, boolean active);
     void setPassword(SetPasswordRequest request);
     void signup(SignUpRequest request);
+    LoginResponse login(LoginRequest request);
 }

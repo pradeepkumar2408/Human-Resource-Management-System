@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    List<Notification> findByEmployeeIdOrderByCreatedAtDesc(String employeeId);
+    List<Notification> findByEmployeeIdOrEmployeeIdOrderByCreatedAtDesc(String employeeId, String allKeyword);
 }

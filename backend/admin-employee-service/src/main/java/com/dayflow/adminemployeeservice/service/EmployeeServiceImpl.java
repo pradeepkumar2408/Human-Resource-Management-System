@@ -137,11 +137,14 @@ public class EmployeeServiceImpl implements EmployeeService {
                     .orElseThrow(() -> new ResourceNotFoundException("Designation not found with ID: " + request.getDesignationId()));
         }
 
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found with ID: " + request.getRoleId()));
+        Role role = null;
+        if (request.getRoleId() != null) {
+            role = roleRepository.findById(request.getRoleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Role not found with ID: " + request.getRoleId()));
+        }
 
         Employee manager = null;
-        if (request.getManagerId() != null) {
+        if (request.getManagerId() != null && !request.getManagerId().trim().isEmpty()) {
             if (request.getManagerId().equals(id)) {
                 throw new IllegalArgumentException("Employee cannot be their own manager");
             }
@@ -149,18 +152,21 @@ public class EmployeeServiceImpl implements EmployeeService {
                     .orElseThrow(() -> new ResourceNotFoundException("Manager not found with ID: " + request.getManagerId()));
         }
 
-        // 3. Update Address
+        // 3. Update Address if details provided
         Address address = employee.getAddress();
-        if (address == null) {
-            address = new Address();
+        if (request.getLine1() != null || request.getCity() != null || request.getState() != null) {
+            if (address == null) {
+                address = new Address();
+            }
+            address.setLine1(request.getLine1());
+            address.setLine2(request.getLine2());
+            address.setCity(request.getCity());
+            address.setState(request.getState());
+            address.setPinCode(request.getPinCode());
+            address.setCountry(request.getCountry());
+            address = addressRepository.save(address);
+            employee.setAddress(address);
         }
-        address.setLine1(request.getLine1());
-        address.setLine2(request.getLine2());
-        address.setCity(request.getCity());
-        address.setState(request.getState());
-        address.setPinCode(request.getPinCode());
-        address.setCountry(request.getCountry());
-        address = addressRepository.save(address);
 
         // 4. Update Employee
         employee.setFirstName(request.getFirstName());
@@ -168,18 +174,19 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setDob(request.getDob());
         employee.setGender(request.getGender());
         employee.setPhone(request.getPhone());
-        employee.setAddress(address);
-        employee.setDepartment(department);
-        employee.setDesignation(designation);
-        employee.setManager(manager);
-        employee.setJoiningDate(request.getJoiningDate());
+        if (department != null) employee.setDepartment(department);
+        if (designation != null) employee.setDesignation(designation);
+        if (manager != null) employee.setManager(manager);
+        if (request.getJoiningDate() != null) employee.setJoiningDate(request.getJoiningDate());
         employee = employeeRepository.save(employee);
 
-        // 5. Update AppUser Role
+        // 5. Update AppUser Role if role provided
         AppUser appUser = appUserRepository.findByEmployeeId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AppUser credentials not found for Employee ID: " + id));
-        appUser.setRole(role);
-        appUser = appUserRepository.save(appUser);
+        if (role != null) {
+            appUser.setRole(role);
+            appUser = appUserRepository.save(appUser);
+        }
 
         return convertToResponse(employee, appUser);
     }
@@ -194,9 +201,11 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<EmployeeResponse> getEmployees(String firstName, String lastName, Long departmentId, Long designationId, Boolean isActive, Pageable pageable) {
-        Page<Employee> employees = employeeRepository.findAllWithFilters(firstName, lastName, departmentId, designationId, isActive, pageable);
-        return employees.map(this::convertToResponse);
+    public java.util.List<EmployeeResponse> getEmployees(String firstName, String lastName, Long departmentId, Long designationId, Boolean isActive) {
+        Page<Employee> employees = employeeRepository.findAllWithFilters(firstName, lastName, departmentId, designationId, isActive, org.springframework.data.domain.Pageable.unpaged());
+        return employees.getContent().stream()
+                .map(this::convertToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -259,6 +268,31 @@ public class EmployeeServiceImpl implements EmployeeService {
         appUser.setEmailVerified(true);
         appUser.setActive(true);
         appUserRepository.save(appUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+        AppUser appUser = appUserRepository.findByEmail(request.getEmail().trim())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+
+        String hashedInput = PasswordUtils.hashPassword(request.getPassword());
+        if (!appUser.getPasswordHash().equals(hashedInput)) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        if (!appUser.isActive()) {
+            throw new IllegalArgumentException("Account is currently suspended. Please contact HR.");
+        }
+
+        return LoginResponse.builder()
+                .token("JWT-DEMO-TOKEN-" + UUID.randomUUID().toString())
+                .user(LoginResponse.UserDto.builder()
+                        .employeeId(appUser.getEmployee().getId())
+                        .email(appUser.getEmail())
+                        .role(appUser.getRole().getRoleName())
+                        .build())
+                .build();
     }
 
     private EmployeeResponse convertToResponse(Employee employee) {

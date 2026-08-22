@@ -26,7 +26,7 @@ public class Attendance {
     private Long id;
 
     @Column(name = "EMPLOYEE_ID", nullable = false)
-    private Long employeeId;
+    private String employeeId;
 
     @Column(name = "DEPARTMENT_ID")
     private Long departmentId;

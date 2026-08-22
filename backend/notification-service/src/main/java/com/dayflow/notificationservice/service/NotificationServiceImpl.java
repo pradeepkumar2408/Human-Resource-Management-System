@@ -42,7 +42,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotificationsForEmployee(String employeeId) {
-        List<Notification> notifications = notificationRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
+        List<Notification> notifications = notificationRepository.findByEmployeeIdOrEmployeeIdOrderByCreatedAtDesc(employeeId, "ALL");
         return notifications.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
