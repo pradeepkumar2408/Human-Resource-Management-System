@@ -153,10 +153,6 @@ export default function VerifyEmail({
       minHeight: '100vh',
       width: '100%',
       backgroundColor: '#000000',
-      backgroundImage: `
-        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07) 0%, transparent 50%),
-        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.03) 0%, transparent 50%)
-      `,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
