@@ -1,9 +1,11 @@
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\AdminEmployeeApplication.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\controller\AdminEmployeeController.java
+C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\controller\AuthController.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeOnboardRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeResponse.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\SetPasswordRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\SignUpRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\entity\Address.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\entity\AppUser.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\entity\Department.java

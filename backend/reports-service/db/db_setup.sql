@@ -1,0 +1,9 @@
+-- =========================================================================
+-- REPORTS SERVICE DATABASE SETUP SCRIPT
+-- =========================================================================
+-- Note: The Reports Service (reports-service) operates as a read-only 
+-- API aggregator and does not require its own dedicated Oracle database schema.
+-- It dynamically aggregates statistics and data from other services 
+-- (attendance-service, leave-service, payroll-service, employee-service).
+-- No tables, sequences, or constraints are required for this service.
+-- =========================================================================
