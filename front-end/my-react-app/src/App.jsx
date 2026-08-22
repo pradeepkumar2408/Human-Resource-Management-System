@@ -1,17 +1,31 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
-import Login from './Components/Login'
-import AdminDashboard from './pages/admin/AdminDashboard'
+
+import { useState } from 'react';
+import Login from './Components/Login';
+import SignUp from './Components/SignUp';
+import ForgotPassword from './Components/ForgotPassword';
+import VerifyEmail from './Components/VerifyEmail';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('login');
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [userData, setUserData] = useState(null);
+
+  const handleLoginSuccess = (data) => {
+    setUserData(data);
+    setCurrentPage('dashboard');
+  };
+
+  const handleSignUpSuccess = (data, email) => {
+    setRegisteredEmail(email);
+    setCurrentPage('verify-email');
+  };
+
   return (
     <>
-      <AdminDashboard />
-    </>
-  )
+      <AdminDashboard/>
+    </> 
+  );
 }
 
-export default App
+export default App;

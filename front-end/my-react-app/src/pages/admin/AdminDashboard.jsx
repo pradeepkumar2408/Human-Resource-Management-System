@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import EmployeeList from './EmployeeList';
+import AdminAttendance from './AdminAttendance';
+import LeaveApprovals from './LeaveApprovals';
+import AdminPayroll from './AdminPayroll';
+import Reports from './Reports';
+import Notifications from './Notifications';
 
 // API Base URL (Configurable to gateway or host)
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -7,34 +13,46 @@ export default function AdminDashboard() {
   // Screen Width Listener for Responsive Layouts
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
-  // Sidebar Toggle for Mobile/Tablet Views
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Navbar Toggle for Mobile/Tablet Views
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Hover States for Inline CSS Interactivity
+  // Active Tab State (Dashboard, Directory, Attendance, Leaves, Payroll, Reports, Notifications)
+  const [activeTab, setActiveTab] = useState('Dashboard');
+
+  // Dark Mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Hover States for CSS Interactivity
   const [hoveredCard, setHoveredCard] = useState(null);
   const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredBtn, setHoveredBtn] = useState(false);
+  const [hoveredThemeBtn, setHoveredThemeBtn] = useState(false);
 
   // Component State
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Search & Filter State
-  const [employeeSearch, setEmployeeSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('All');
-  
   // Quick Employee Switcher State
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [switcherDetails, setSwitcherDetails] = useState(null);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switcherSearch, setSwitcherSearch] = useState('');
 
-  // Leave Action State
-  const [rejectComments, setRejectComments] = useState({});
-  const [activeRejectId, setActiveRejectId] = useState(null);
-  const [actioningId, setActioningId] = useState(null);
+  // Close searchable switcher when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('#custom-switcher')) {
+        setSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Listen to browser resize
   useEffect(() => {
@@ -70,15 +88,44 @@ export default function AdminDashboard() {
       const leaveData = await leaveRes.json();
       setLeaves(leaveData);
 
-      // 4. Fetch Analytics Reports
-      const analyticsRes = await fetch(`${API_BASE_URL}/reports/analytics`);
-      if (analyticsRes.ok) {
-        const analyticsData = await analyticsRes.json();
-        setAnalytics(analyticsData);
+      // 4. Fetch Broadcast Alerts
+      const alertsRes = await fetch(`${API_BASE_URL}/admin/notifications`);
+      if (alertsRes.ok) {
+        const alertsData = await alertsRes.json();
+        setNotifications(alertsData);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Offline mode loaded. Error: ', err.message);
       setError(err.message || 'An error occurred while communicating with the backend services.');
+      
+      // Initialize High-Fidelity Mock Data fallback for offline demo
+      setEmployees([
+        { id: 'EMP001', employeeId: 'EMP001', firstName: 'John', lastName: 'Doe', email: 'john.doe@dayflow.com', phone: '+91 98765 43210', departmentName: 'Engineering', designationTitle: 'Software Engineer', joiningDate: '2024-03-15', managerName: 'Sarah Jenkins', role: 'Employee', active: true, salary: { basic: 55000, hra: 22000, allowances: 11000, deductions: 5500 }, documents: { aadhar: 'Verified', pan: 'Verified', offerLetter: 'Uploaded' } },
+        { id: 'EMP002', employeeId: 'EMP002', firstName: 'Sarah', lastName: 'Jenkins', email: 'sarah.j@dayflow.com', phone: '+91 98765 43211', departmentName: 'Engineering', designationTitle: 'Engineering Manager', joiningDate: '2022-01-10', managerName: 'David Vance', role: 'HR', active: true, salary: { basic: 95000, hra: 38000, allowances: 19000, deductions: 9500 }, documents: { aadhar: 'Verified', pan: 'Verified', offerLetter: 'Uploaded' } },
+        { id: 'EMP003', employeeId: 'EMP003', firstName: 'Alex', lastName: 'Rivera', email: 'alex.r@dayflow.com', phone: '+91 98765 43212', departmentName: 'Marketing', designationTitle: 'SEO Specialist', joiningDate: '2024-05-20', managerName: 'Sarah Jenkins', role: 'Employee', active: true, salary: { basic: 45000, hra: 18000, allowances: 9000, deductions: 4500 }, documents: { aadhar: 'Pending', pan: 'Verified', offerLetter: 'Pending' } },
+        { id: 'EMP004', employeeId: 'EMP004', firstName: 'Emma', lastName: 'Stone', email: 'emma.s@dayflow.com', phone: '+91 98765 43213', departmentName: 'Operations', designationTitle: 'Operations Lead', joiningDate: '2023-11-01', managerName: 'David Vance', role: 'Employee', active: false, salary: { basic: 65000, hra: 26000, allowances: 13000, deductions: 6500 }, documents: { aadhar: 'Verified', pan: 'Pending', offerLetter: 'Uploaded' } },
+        { id: 'EMP005', employeeId: 'EMP005', firstName: 'David', lastName: 'Vance', email: 'david.v@dayflow.com', phone: '+91 98765 43214', departmentName: 'Operations', designationTitle: 'VP Operations', joiningDate: '2020-08-01', managerName: 'None', role: 'HR', active: true, salary: { basic: 130000, hra: 52000, allowances: 26000, deductions: 13000 }, documents: { aadhar: 'Verified', pan: 'Verified', offerLetter: 'Uploaded' } },
+      ]);
+
+      setAttendance([
+        { id: 'ATT001', employeeId: 'EMP001', employeeName: 'John Doe', date: '2026-08-22', checkInTime: '09:05 AM', checkOutTime: '05:30 PM', status: 'Present', remarks: 'Checked in on time' },
+        { id: 'ATT002', employeeId: 'EMP002', employeeName: 'Sarah Jenkins', date: '2026-08-22', checkInTime: '08:55 AM', checkOutTime: '06:00 PM', status: 'Present', remarks: '' },
+        { id: 'ATT003', employeeId: 'EMP003', employeeName: 'Alex Rivera', date: '2026-08-22', checkInTime: '09:30 AM', checkOutTime: '05:45 PM', status: 'Late', remarks: 'Metro delay' },
+        { id: 'ATT004', employeeId: 'EMP004', employeeName: 'Emma Stone', date: '2026-08-22', checkInTime: '--', checkOutTime: '--', status: 'Absent', remarks: 'Sick leave logged' },
+        { id: 'ATT005', employeeId: 'EMP005', employeeName: 'David Vance', date: '2026-08-22', checkInTime: '09:00 AM', checkOutTime: '05:00 PM', status: 'Present', remarks: '' }
+      ]);
+
+      setLeaves([
+        { id: 'LV001', employeeId: 'EMP001', employeeName: 'John Doe', leaveTypeName: 'Privilege Leave', startDate: '2026-08-25', endDate: '2026-08-28', numberOfDays: 4, remarks: 'Family function in hometown', status: 'Pending' },
+        { id: 'LV002', employeeId: 'EMP003', employeeName: 'Alex Rivera', leaveTypeName: 'Sick Leave', startDate: '2026-08-23', endDate: '2026-08-24', numberOfDays: 2, remarks: 'Recovering from viral fever', status: 'Pending' },
+        { id: 'LV003', employeeId: 'EMP004', employeeName: 'Emma Stone', leaveTypeName: 'Casual Leave', startDate: '2026-08-22', endDate: '2026-08-22', numberOfDays: 1, remarks: 'Personal work', status: 'Approved' }
+      ]);
+
+      setNotifications([
+        { id: 'N001', title: 'New Leave Request Filed', message: 'John Doe has requested 4 days of Privilege Leave starting Aug 25.', type: 'Announcement', timestamp: '5 mins ago' },
+        { id: 'N002', title: 'Aadhar Document Uploaded', message: 'Emma Stone uploaded Aadhar card proof for verification.', type: 'Policy', timestamp: '1 hour ago' },
+        { id: 'N003', title: 'Gateway Connection Alert', message: 'Vite portal is running in offline demo mode. Enable Spring Boot services for live DB synchronization.', type: 'Urgent', timestamp: 'Just Now' }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -94,6 +141,13 @@ export default function AdminDashboard() {
       setSwitcherDetails(null);
       return;
     }
+    // Fallback context builder if backend fails
+    const emp = employees.find(e => (e.employeeId || e.id) === selectedEmployeeId);
+    if (emp) {
+      setSwitcherDetails(emp);
+      return;
+    }
+
     const fetchEmployeeDetail = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/employees/${selectedEmployeeId}`);
@@ -106,53 +160,18 @@ export default function AdminDashboard() {
       }
     };
     fetchEmployeeDetail();
-  }, [selectedEmployeeId]);
+  }, [selectedEmployeeId, employees]);
 
-  // Quick Approve Leave Handler
-  const handleApproveLeave = async (leaveId) => {
-    setActioningId(leaveId);
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/leaves/${leaveId}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Approval request failed');
-      await fetchDashboardData();
-    } catch (err) {
-      alert(`Error approving leave: ${err.message}`);
-    } finally {
-      setActioningId(null);
-    }
+  // Quick Approve Leave Handler (Dashboard Specific widget action)
+  const handleApproveLeave = (leaveId) => {
+    setLeaves(prev => prev.map(leave => {
+      if ((leave.leaveId || leave.id) === leaveId) {
+        return { ...leave, status: 'Approved', leaveStatusName: 'Approved' };
+      }
+      return leave;
+    }));
   };
 
-  // Quick Reject Leave Handler
-  const handleRejectLeave = async (leaveId) => {
-    const comment = rejectComments[leaveId];
-    if (!comment || comment.trim() === '') {
-      alert('A rejection reason comment is mandatory.');
-      return;
-    }
-    setActioningId(leaveId);
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/leaves/${leaveId}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approverComment: comment })
-      });
-      if (!res.ok) throw new Error('Rejection request failed');
-      setRejectComments(prev => ({ ...prev, [leaveId]: '' }));
-      setActiveRejectId(null);
-      await fetchDashboardData();
-    } catch (err) {
-      alert(`Error rejecting leave: ${err.message}`);
-    } finally {
-      setActioningId(null);
-    }
-  };
-
-  // Calculations for Widgets
-  const pendingLeaves = leaves.filter(l => l.status === 'Pending' || l.leaveStatusName === 'Pending');
-  
   // Counts based on today's attendance records
   const attendanceCounts = attendance.reduce(
     (acc, record) => {
@@ -166,171 +185,261 @@ export default function AdminDashboard() {
     { present: 0, absent: 0, halfDay: 0, onLeave: 0 }
   );
 
-  // Filters for Employee List Summary Widget
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = 
-      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      (emp.email && emp.email.toLowerCase().includes(employeeSearch.toLowerCase())) ||
-      (emp.employeeId && emp.employeeId.toString().includes(employeeSearch));
-      
-    const matchesDept = deptFilter === 'All' || emp.departmentName === deptFilter || emp.deptName === deptFilter;
-    return matchesSearch && matchesDept;
-  });
+  const pendingLeaves = leaves.filter(l => (l.status === 'Pending' || l.leaveStatusName === 'Pending'));
 
-  // Extract unique departments for filtering
-  const departments = ['All', ...new Set(employees.map(e => e.departmentName || e.deptName).filter(Boolean))];
+  // Theme Colors Mapping (Dynamic depending on darkMode state)
+  const colors = {
+    bg: darkMode ? '#0B0F19' : '#F8F9FA', 
+    navBg: darkMode ? '#111827' : '#FFFFFF', 
+    cardBg: darkMode ? '#1F2937' : '#FFFFFF', 
+    border: darkMode ? '#374151' : '#E4E7EC', 
+    text: darkMode ? '#F9FAFB' : '#101828', 
+    textMuted: darkMode ? '#9CA3AF' : '#667085', 
+    accent: darkMode ? '#60A5FA' : '#2563EB',
+    tableHeaderBg: darkMode ? '#1F2937' : '#FFFFFF',
+    tableBorder: darkMode ? '#374151' : '#EAECF0',
+    btnSignOutBg: darkMode ? '#F9FAFB' : '#000000',
+    btnSignOutText: darkMode ? '#111827' : '#FFFFFF',
+    kpiIconBg: darkMode ? '#374151' : '#F0F9FF',
+    kpiIconColor: darkMode ? '#D1D5DB' : '#0052CC',
+    chartBg: darkMode ? '#111827' : '#FCFCFD',
+    inputBg: darkMode ? '#1F2937' : '#FFFFFF',
+  };
 
-  // Inline CSS Styles Object (Deel-Inspired Modern Palette & Responsive Scaling)
+  // Safe DOM Reset Style Application inside useEffect (Supports React 19 and bypasses rendering issues)
+  useEffect(() => {
+    const rootEl = document.getElementById('root');
+    if (rootEl) {
+      rootEl.style.width = '100%';
+      rootEl.style.maxWidth = '100%';
+      rootEl.style.margin = '0';
+      rootEl.style.padding = '0';
+      rootEl.style.textAlign = 'left';
+      rootEl.style.borderInline = 'none';
+      rootEl.style.backgroundColor = colors.bg;
+      rootEl.style.transition = 'background-color 0.3s ease';
+    }
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.width = '100%';
+    document.body.style.maxWidth = '100%';
+    document.body.style.backgroundColor = colors.bg;
+    document.body.style.transition = 'background-color 0.3s ease';
+    
+    const htmlEl = document.documentElement;
+    if (htmlEl) {
+      htmlEl.style.margin = '0';
+      htmlEl.style.padding = '0';
+      htmlEl.style.width = '100%';
+      htmlEl.style.backgroundColor = colors.bg;
+      htmlEl.style.transition = 'background-color 0.3s ease';
+    }
+  }, [darkMode, colors.bg]);
+
+  // Inline CSS Styles Object (Deel-Inspired Modern Palette, Transitions & Responsive)
   const styles = {
     appWrapper: {
       display: 'flex',
-      backgroundColor: '#F8F9FA',
+      flexDirection: 'column',
+      backgroundColor: colors.bg,
       minHeight: '100vh',
       width: '100%',
       overflowX: 'hidden',
       fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      transition: 'background-color 0.3s ease, color 0.3s ease',
+      color: colors.text,
     },
-    // Sidebar Style (Deel Navy `#0C111D`)
-    sidebar: {
-      width: '260px',
-      backgroundColor: '#0C111D',
-      color: '#F9FAFB',
-      display: (isDesktop || sidebarOpen) ? 'flex' : 'none',
-      flexDirection: 'column',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      height: '100vh',
-      zIndex: 1000,
-      borderRight: '1px solid #1F2A37',
-      boxShadow: isDesktop ? 'none' : '4px 0 24px rgba(0,0,0,0.15)',
-      transition: 'all 0.3s ease-in-out',
-    },
-    sidebarLogo: {
-      padding: '32px 24px 24px 24px',
-      borderBottom: '1px solid #1F2A37',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-    },
-    logoText: {
-      fontSize: '22px',
-      fontWeight: '800',
-      color: '#FFFFFF',
-      letterSpacing: '-0.5px',
-      margin: 0,
-    },
-    logoDot: {
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      backgroundColor: '#2563EB',
-      display: 'inline-block',
-    },
-    sidebarNavList: {
-      listStyle: 'none',
-      padding: '24px 12px',
-      margin: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      flexGrow: 1,
-    },
-    sidebarNavItem: (isActive, isHovered) => ({
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '12px 16px',
-      borderRadius: '8px',
-      fontSize: '14px',
-      fontWeight: '600',
-      color: isActive ? '#FFFFFF' : isHovered ? '#FFFFFF' : '#98A2B3',
-      backgroundColor: isActive ? '#1F2A37' : isHovered ? '#1F2A37' : 'transparent',
-      cursor: 'pointer',
-      textDecoration: 'none',
-      transition: 'all 0.2s',
-    }),
-    sidebarFooter: {
-      padding: '20px 16px',
-      borderTop: '1px solid #1F2A37',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      backgroundColor: '#070A11',
-    },
-    adminAvatar: {
-      width: '40px',
-      height: '40px',
-      borderRadius: '50%',
-      backgroundColor: '#2563EB',
-      color: '#FFFFFF',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: '700',
-      fontSize: '15px',
-    },
-    adminName: {
-      fontSize: '13px',
-      fontWeight: '700',
-      color: '#FFFFFF',
-      margin: '0 0 2px 0',
-    },
-    adminRole: {
-      fontSize: '11px',
-      color: '#98A2B3',
-      margin: 0,
-    },
-    // Main Content Panel
-    mainPanel: {
-      flex: 1,
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      marginLeft: isDesktop ? '260px' : '0', // Keep sidebar fixed in place on desktop
-    },
-    // Top Navigation (Mobile / Tablet header)
     topBar: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: isMobile ? '16px 20px' : '20px 32px',
-      backgroundColor: '#FFFFFF',
-      borderBottom: '1px solid #E4E7EC',
+      padding: isMobile ? '16px 20px' : '20px 48px',
+      backgroundColor: colors.navBg,
+      borderBottom: `1px solid ${colors.border}`,
       position: 'sticky',
       top: 0,
       zIndex: 900,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+      transition: 'background-color 0.3s ease, border-color 0.3s ease',
     },
-    menuToggleBtn: {
-      display: isDesktop ? 'none' : 'flex',
-      backgroundColor: 'transparent',
-      border: 'none',
-      fontSize: '22px',
-      color: '#0C111D',
-      cursor: 'pointer',
-      padding: 0,
+    topBarLeft: {
+      display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: '24px',
+    },
+    logoText: {
+      fontSize: '24px',
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: '-0.8px',
+      margin: 0,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      transition: 'color 0.3s ease',
+    },
+    logoDot: {
+      color: '#2563EB',
+    },
+    navLinksContainer: {
+      display: (isDesktop || isTablet) ? 'flex' : 'none',
+      alignItems: 'center',
+      gap: '20px',
+      marginLeft: '12px',
+    },
+    navLink: (isActive, isHovered) => ({
+      fontSize: '14px',
+      fontWeight: '600',
+      color: isActive ? colors.accent : isHovered ? colors.accent : colors.text,
+      textDecoration: 'none',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '8px 16px',
+      borderRadius: '20px',
+      backgroundColor: isActive 
+        ? (darkMode ? 'rgba(96, 165, 250, 0.12)' : 'rgba(37, 99, 235, 0.08)') 
+        : isHovered 
+          ? (darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)') 
+          : 'transparent',
+      transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    }),
+    dropdownArrow: {
+      fontSize: '10px',
+      opacity: 0.8,
+      marginLeft: '2px',
+      fontWeight: 'bold',
+      transition: 'transform 0.2s ease',
     },
     topBarRight: {
       display: 'flex',
       alignItems: 'center',
       gap: '16px',
     },
-    // Content Layout Container
+    switcherSelect: {
+      padding: '8px 12px',
+      borderRadius: '20px',
+      border: `1px solid ${colors.border}`,
+      backgroundColor: colors.inputBg,
+      fontSize: '13px',
+      color: colors.text,
+      fontWeight: '600',
+      outline: 'none',
+      cursor: 'pointer',
+      boxShadow: '0 1px 2px rgba(16,24,40,0.05)',
+      maxWidth: isMobile ? '100px' : '170px',
+      transition: 'all 0.3s ease',
+    },
+    bellButton: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      border: `1px solid ${colors.border}`,
+      backgroundColor: colors.inputBg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: '16px',
+      color: colors.text,
+      position: 'relative',
+      transition: 'all 0.3s ease',
+    },
+    bellBadge: {
+      position: 'absolute',
+      top: '8px',
+      right: '8px',
+      width: '8px',
+      height: '8px',
+      borderRadius: '50%',
+      backgroundColor: '#D92D20',
+    },
+    themeButton: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      border: `1px solid ${colors.border}`,
+      backgroundColor: colors.inputBg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: '16px',
+      color: darkMode ? '#FFD700' : '#475467',
+      transform: hoveredThemeBtn ? 'rotate(30deg) scale(1.05)' : 'rotate(0) scale(1)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    },
+    profileAvatar: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      backgroundColor: '#0C111D',
+      color: '#FFFFFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: '700',
+      fontSize: '14px',
+      cursor: 'pointer',
+      border: `2px solid ${colors.border}`,
+      transition: 'border-color 0.3s ease',
+    },
+    btnSignOut: (isHovered) => ({
+      backgroundColor: isHovered ? '#B42318' : colors.btnSignOutBg,
+      color: isHovered ? '#FFFFFF' : colors.btnSignOutText,
+      border: 'none',
+      borderRadius: '24px',
+      padding: '10px 20px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
+      transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      display: isMobile ? 'none' : 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+    }),
+    mobileMenuBtn: {
+      display: (isDesktop || isTablet) ? 'none' : 'flex',
+      backgroundColor: 'transparent',
+      border: 'none',
+      fontSize: '22px',
+      color: colors.text,
+      cursor: 'pointer',
+      padding: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'color 0.3s ease',
+    },
+    mobileDrawer: {
+      display: (!isDesktop && !isTablet && mobileMenuOpen) ? 'flex' : 'none',
+      flexDirection: 'column',
+      backgroundColor: colors.navBg,
+      borderBottom: `1px solid ${colors.border}`,
+      padding: '16px 20px 24px 20px',
+      position: 'absolute',
+      top: '73px',
+      left: 0,
+      width: '100%',
+      zIndex: 850,
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+      gap: '16px',
+      transition: 'background-color 0.3s ease, border-color 0.3s ease',
+    },
     contentContainer: {
-      padding: isMobile ? '24px 20px' : '32px 40px',
-      maxWidth: '1600px',
+      padding: isMobile ? '24px 20px' : '40px 48px',
+      maxWidth: '1400px',
       width: '100%',
       margin: '0 auto',
       boxSizing: 'border-box',
     },
-    // Error Banner
     errorBanner: {
-      backgroundColor: '#FEF3F2',
-      border: '1px solid #FECDCA',
-      color: '#B42318',
+      backgroundColor: darkMode ? '#2D1616' : '#FEF3F2',
+      border: `1px solid ${darkMode ? '#7A1C1C' : '#FECDCA'}`,
+      color: darkMode ? '#FCA5A5' : '#B42318',
       padding: '16px 20px',
       borderRadius: '10px',
       marginBottom: '32px',
@@ -339,8 +448,8 @@ export default function AdminDashboard() {
       gap: '12px',
       fontSize: '14px',
       lineHeight: '1.4',
+      transition: 'all 0.3s ease',
     },
-    // KPI Metric Grid
     kpiGrid: {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
@@ -348,47 +457,49 @@ export default function AdminDashboard() {
       marginBottom: '32px',
     },
     kpiCard: (isHovered) => ({
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E4E7EC',
+      backgroundColor: colors.cardBg,
+      border: `1px solid ${colors.border}`,
       borderRadius: '12px',
       padding: '24px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      boxShadow: isHovered ? '0 8px 24px rgba(0,0,0,0.04)' : '0 1px 3px rgba(0,0,0,0.02)',
-      transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
-      transition: 'all 0.2s ease-in-out',
+      boxShadow: isHovered ? '0 12px 28px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.02)',
+      transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     }),
     kpiLabel: {
       fontSize: '12px',
       fontWeight: '600',
-      color: '#667085',
+      color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginBottom: '6px',
+      transition: 'color 0.3s ease',
     },
     kpiValue: {
       fontSize: '30px',
       fontWeight: '700',
-      color: '#101828',
+      color: colors.text,
       margin: 0,
       letterSpacing: '-0.5px',
+      transition: 'color 0.3s ease',
     },
-    kpiIconBox: (bgColor, iconColor) => ({
-      width: '44px',
-      height: '44px',
-      borderRadius: '10px',
+    kpiIconBox: (bgColor, textColor) => ({
+      width: '40px',
+      height: '40px',
+      borderRadius: '8px',
+      backgroundColor: bgColor,
+      color: textColor,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '18px',
-      backgroundColor: bgColor,
-      color: iconColor,
+      fontSize: '20px',
+      transition: 'all 0.3s ease',
     }),
-    // Switcher Panel
     switcherPanel: {
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E4E7EC',
+      backgroundColor: colors.cardBg,
+      border: `1px solid ${colors.border}`,
       borderRadius: '12px',
       padding: '20px 24px',
       marginBottom: '32px',
@@ -398,22 +509,22 @@ export default function AdminDashboard() {
       justifyContent: 'space-between',
       gap: '16px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+      transition: 'all 0.3s ease',
     },
-    // Two Column Layout
     gridContainer: {
       display: 'grid',
       gridTemplateColumns: (isMobile || isTablet) ? '1fr' : '8fr 4fr',
       gap: '28px',
       alignItems: 'start',
     },
-    // Widget Box
     widgetCard: {
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E4E7EC',
+      backgroundColor: colors.cardBg,
+      border: `1px solid ${colors.border}`,
       borderRadius: '12px',
       padding: isMobile ? '20px' : '28px',
       marginBottom: '28px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+      transition: 'all 0.3s ease, border-color 0.3s ease',
     },
     widgetHeader: {
       display: 'flex',
@@ -425,10 +536,10 @@ export default function AdminDashboard() {
       fontSize: '18px',
       fontWeight: '700',
       margin: 0,
-      color: '#101828',
+      color: colors.text,
       letterSpacing: '-0.2px',
+      transition: 'color 0.3s ease',
     },
-    // Table styling (Responsive wrapper needed)
     tableResponsiveWrapper: {
       width: '100%',
       overflowX: 'auto',
@@ -439,25 +550,25 @@ export default function AdminDashboard() {
       borderCollapse: 'collapse',
       textAlign: 'left',
       fontSize: '14px',
-      minWidth: '500px', // Prevent squeeze on mobile scroll
+      minWidth: '500px',
     },
     tableHeadCell: {
       padding: '12px 16px',
       fontWeight: '600',
-      color: '#475467',
+      color: colors.textMuted,
       fontSize: '12px',
       textTransform: 'uppercase',
       letterSpacing: '0.3px',
-      borderBottom: '1px solid #EAECF0',
+      borderBottom: `1px solid ${colors.tableBorder}`,
     },
     tableBodyRow: {
-      borderBottom: '1px solid #EAECF0',
+      borderBottom: `1px solid ${colors.tableBorder}`,
       transition: 'background-color 0.2s',
     },
     tableBodyCell: {
       padding: '16px',
       verticalAlign: 'middle',
-      color: '#344054',
+      color: colors.text,
     },
     badge: (bgColor, textColor) => ({
       display: 'inline-flex',
@@ -469,87 +580,6 @@ export default function AdminDashboard() {
       backgroundColor: bgColor,
       color: textColor,
     }),
-    // Buttons
-    btnPrimary: {
-      backgroundColor: '#2563EB',
-      color: '#FFFFFF',
-      border: 'none',
-      borderRadius: '8px',
-      padding: '10px 18px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
-      transition: 'background-color 0.2s',
-    },
-    btnSuccess: {
-      backgroundColor: '#ECFDF3',
-      color: '#027A48',
-      border: '1px solid #D1FADF',
-      borderRadius: '6px',
-      padding: '6px 12px',
-      fontSize: '13px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-    },
-    btnDanger: {
-      backgroundColor: '#FEF3F2',
-      color: '#B42318',
-      border: '1px solid #FEE4E2',
-      borderRadius: '6px',
-      padding: '6px 12px',
-      fontSize: '13px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-    },
-    // Filter controls
-    filterRow: {
-      display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
-      gap: '12px',
-      marginBottom: '24px',
-    },
-    searchInputWrapper: {
-      position: 'relative',
-      flex: 1,
-    },
-    searchIcon: {
-      position: 'absolute',
-      left: '14px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      color: '#667085',
-      fontSize: '15px',
-    },
-    searchInput: {
-      width: '100%',
-      padding: '10px 16px 10px 42px',
-      borderRadius: '8px',
-      border: '1px solid #D0D5DD',
-      fontSize: '14px',
-      outline: 'none',
-      boxSizing: 'border-box',
-      backgroundColor: '#FFFFFF',
-    },
-    switcherSelect: {
-      padding: '10px 16px',
-      borderRadius: '8px',
-      border: '1px solid #D0D5DD',
-      backgroundColor: '#FFFFFF',
-      fontSize: '14px',
-      color: '#344054',
-      fontWeight: '500',
-      outline: 'none',
-      cursor: 'pointer',
-      boxShadow: '0 1px 2px rgba(16,24,40,0.05)',
-    },
-    // Progress Bars
     progressBarContainer: {
       display: 'flex',
       flexDirection: 'column',
@@ -565,11 +595,11 @@ export default function AdminDashboard() {
       justifyContent: 'space-between',
       fontSize: '13px',
       fontWeight: '500',
-      color: '#475467',
+      color: colors.text,
     },
     progressBarTrack: {
       height: '8px',
-      backgroundColor: '#F2F4F7',
+      backgroundColor: darkMode ? '#374151' : '#F2F4F7',
       borderRadius: '4px',
       overflow: 'hidden',
     },
@@ -582,118 +612,131 @@ export default function AdminDashboard() {
     }),
   };
 
-  // Close mobile sidebar on layout click
-  const closeMobileSidebar = () => {
-    if (!isDesktop) setSidebarOpen(false);
-  };
-
   return (
     <div style={styles.appWrapper}>
-      {/* Self-contained CSS overrides to ensure full screen coverage without external CSS files */}
-      <style>{`
-        html, body, #root {
-          margin: 0 !important;
-          padding: 0 !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          min-height: 100vh !important;
-          background-color: #F8F9FA !important;
-          text-align: left !important;
-          border-inline: none !important;
-        }
-      `}</style>
-      
-      {/* 1. PERSISTENT SIDEBAR Drawer (Responsive/Collapsible) */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#2563EB', display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>D</div>
-          <h2 style={styles.logoText}>Dayflow<span style={styles.logoDot}></span></h2>
-        </div>
+      {/* 1. DEEL STYLE TOP NAVBAR */}
+      <div style={styles.topBar}>
         
-        <ul style={styles.sidebarNavList}>
-          <li>
+        {/* Left Side: Brand Logo & Navigation Tabs */}
+        <div style={styles.topBarLeft}>
+          <h2 style={styles.logoText} onClick={() => setActiveTab('Dashboard')}>
+            dayflow<span style={styles.logoDot}>.</span>
+          </h2>
+
+          <nav style={styles.navLinksContainer}>
             <a 
               href="#dashboard" 
-              style={styles.sidebarNavItem(true, false)}
+              style={styles.navLink(activeTab === 'Dashboard', hoveredNav === 'Dashboard')}
+              onMouseEnter={() => setHoveredNav('Dashboard')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Dashboard'); }}
             >
-              <i className="bi bi-grid-1x2-fill"></i>
-              <span>Dashboard</span>
+              Dashboard
             </a>
-          </li>
-          
-          {/* Simulated navigation buttons with hover states */}
-          {['Directory', 'Attendance', 'Leave Approvals', 'Payroll Control', 'Analytics Reports', 'System Settings'].map((nav, index) => {
-            const icons = ['bi-people', 'bi-calendar-check', 'bi-envelope-paper', 'bi-wallet2', 'bi-graph-up-arrow', 'bi-gear'];
-            const key = `nav-${index}`;
-            return (
-              <li key={key}>
-                <a
-                  href={`#${nav.toLowerCase().replace(' ', '-')}`}
-                  style={styles.sidebarNavItem(false, hoveredNav === index)}
-                  onMouseEnter={() => setHoveredNav(index)}
-                  onMouseLeave={() => setHoveredNav(null)}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closeMobileSidebar();
-                  }}
-                >
-                  <i className={`bi ${icons[index]}`}></i>
-                  <span>{nav}</span>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
 
-        {/* Sidebar Footer (Active Admin Context) */}
-        <div style={{
-          ...styles.sidebarFooter,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          gap: '12px',
-          padding: '16px'
-        }}>
-          {/* Admin User Info row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={styles.adminAvatar}>HR</div>
-            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-              <h4 style={styles.adminName}>Admin Portal</h4>
-              <p style={styles.adminRole}>admin@dayflow.com</p>
-            </div>
+            <a 
+              href="#directory" 
+              style={styles.navLink(activeTab === 'Directory', hoveredNav === 'Directory')}
+              onMouseEnter={() => setHoveredNav('Directory')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Directory'); }}
+            >
+              Directory <i className="bi bi-chevron-down" style={styles.dropdownArrow}></i>
+            </a>
+
+            <a 
+              href="#attendance" 
+              style={styles.navLink(activeTab === 'Attendance', hoveredNav === 'Attendance')}
+              onMouseEnter={() => setHoveredNav('Attendance')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Attendance'); }}
+            >
+              Attendance <i className="bi bi-chevron-down" style={styles.dropdownArrow}></i>
+            </a>
+
+            <a 
+              href="#leaves" 
+              style={styles.navLink(activeTab === 'Leaves', hoveredNav === 'Leaves')}
+              onMouseEnter={() => setHoveredNav('Leaves')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Leaves'); }}
+            >
+              Leave Approvals <i className="bi bi-chevron-down" style={styles.dropdownArrow}></i>
+            </a>
+
+            <a 
+              href="#payroll" 
+              style={styles.navLink(activeTab === 'Payroll', hoveredNav === 'Payroll')}
+              onMouseEnter={() => setHoveredNav('Payroll')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Payroll'); }}
+            >
+              Payroll
+            </a>
+
+            <a 
+              href="#reports" 
+              style={styles.navLink(activeTab === 'Reports', hoveredNav === 'Reports')}
+              onMouseEnter={() => setHoveredNav('Reports')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Reports'); }}
+            >
+              Analytics <i className="bi bi-chevron-down" style={styles.dropdownArrow}></i>
+            </a>
+
+            <a 
+              href="#notifications" 
+              style={styles.navLink(activeTab === 'Notifications', hoveredNav === 'Notifications')}
+              onMouseEnter={() => setHoveredNav('Notifications')}
+              onMouseLeave={() => setHoveredNav(null)}
+              onClick={(e) => { e.preventDefault(); setActiveTab('Notifications'); }}
+            >
+              Notice Board
+            </a>
+          </nav>
+        </div>
+
+        {/* Right Side: Switcher, Bell, Theme, Profile & Signout Button */}
+        <div style={styles.topBarRight}>
+          
+          {/* Mobile hamburger menu toggle */}
+          <button 
+            style={styles.mobileMenuBtn}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <i className={mobileMenuOpen ? 'bi bi-x-lg' : 'bi bi-list'}></i>
+          </button>
+
+          {/* Theme Toggle Button (Light / Dark Mode Toggler) */}
+          <button 
+            style={styles.themeButton}
+            onClick={() => setDarkMode(!darkMode)}
+            onMouseEnter={() => setHoveredThemeBtn(true)}
+            onMouseLeave={() => setHoveredThemeBtn(false)}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            <i className={`bi ${darkMode ? 'bi-sun-fill' : 'bi-moon-stars-fill'}`}></i>
+          </button>
+
+          {/* Notifications Alert Bell */}
+          <button style={styles.bellButton} onClick={() => setActiveTab('Notifications')}>
+            <i className="bi bi-bell"></i>
+            {pendingLeaves.length > 0 && <span style={styles.bellBadge}></span>}
+          </button>
+
+          {/* Profile Circle Logo */}
+          <div style={styles.profileAvatar} title="Admin Account">
+            AD
           </div>
 
-          {/* Sign Out Button */}
+          {/* Sign Out Button (Styled as Deel's "Book a demo" pill button) */}
           <button 
+            style={styles.btnSignOut(hoveredBtn)}
+            onMouseEnter={() => setHoveredBtn(true)}
+            onMouseLeave={() => setHoveredBtn(false)}
             onClick={() => {
               alert('Signing out from Admin Portal...');
               window.location.reload();
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '100%',
-              backgroundColor: '#1F2A37',
-              color: '#F9FAFB',
-              border: '1px solid #374151',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#B42318';
-              e.currentTarget.style.borderColor = '#B42318';
-              e.currentTarget.style.color = '#FFFFFF';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#1F2A37';
-              e.currentTarget.style.borderColor = '#374151';
-              e.currentTarget.style.color = '#F9FAFB';
             }}
           >
             <i className="bi bi-box-arrow-right"></i>
@@ -702,180 +745,326 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Background Overlay when Sidebar is open on Mobile */}
-      {!isDesktop && sidebarOpen && (
-        <div 
-          onClick={closeMobileSidebar} 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(9, 30, 66, 0.4)',
-            zIndex: 950,
-          }}
-        />
+      {/* MOBILE NAV DRAWER */}
+      {mobileMenuOpen && (
+        <div style={styles.mobileDrawer}>
+          {['Dashboard', 'Directory', 'Attendance', 'Leaves', 'Payroll', 'Reports', 'Notifications'].map(tab => (
+            <a
+              key={tab}
+              href={`#${tab.toLowerCase()}`}
+              style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: activeTab === tab ? '#2563EB' : colors.text,
+                textDecoration: 'none',
+                padding: '8px 0',
+                borderBottom: `1px solid ${colors.border}`,
+                transition: 'color 0.2s',
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab(tab);
+                setMobileMenuOpen(false);
+              }}
+            >
+              {tab === 'Leaves' ? 'Leave Approvals' : tab === 'Reports' ? 'Analytics' : tab === 'Notifications' ? 'Notice Board' : tab}
+            </a>
+          ))}
+          
+          {/* Mobile Theme Toggle Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: colors.text }}>Theme (Dark / Light)</span>
+            <button 
+              style={{ ...styles.themeButton, width: '48px', height: '36px', borderRadius: '18px' }}
+              onClick={() => setDarkMode(!darkMode)}
+            >
+              <i className={`bi ${darkMode ? 'bi-sun-fill' : 'bi-moon-stars-fill'}`}></i>
+            </button>
+          </div>
+
+          <button 
+            style={{
+              backgroundColor: '#B42318',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '24px',
+              padding: '12px',
+              fontWeight: '700',
+              fontSize: '14px',
+              cursor: 'pointer',
+              marginTop: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+            onClick={() => {
+              alert('Signing out...');
+              window.location.reload();
+            }}
+          >
+            <i className="bi bi-box-arrow-right"></i>
+            Sign Out
+          </button>
+        </div>
       )}
 
-      {/* 2. MAIN PANEL */}
-      <div style={styles.mainPanel}>
+      {/* 2. SCROLLABLE CONTENT BODY */}
+      <div style={styles.contentContainer}>
         
-        {/* Top Navigation Bar */}
-        <div style={styles.topBar}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={styles.menuToggleBtn}
-              aria-label="Toggle Navigation Menu"
-            >
-              <i className={sidebarOpen ? 'bi bi-x-lg' : 'bi bi-list'}></i>
-            </button>
-            
-            <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: '#101828' }}>
-              Dayflow HRIS
-            </h2>
+        {/* Welcome & Meta Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '800', color: colors.text, margin: '0 0 6px 0', letterSpacing: '-0.5px', transition: 'color 0.3s' }}>
+              Welcome Back, Admin
+            </h1>
+            <p style={{ fontSize: '14px', color: colors.textMuted, margin: 0, transition: 'color 0.3s' }}>
+              Every workday, perfectly aligned. Showing view context: **{activeTab === 'Leaves' ? 'Leave Approvals' : activeTab === 'Reports' ? 'Analytics' : activeTab === 'Notifications' ? 'Notice Board' : activeTab}**.
+            </p>
           </div>
-
-          <div style={styles.topBarRight}>
-            {/* Notifications Alert Bell */}
-            <button 
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                border: '1px solid #D0D5DD',
-                backgroundColor: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                fontSize: '16px',
-                color: '#344054',
-                position: 'relative',
-                marginRight: '8px'
-              }}
-            >
-              <i className="bi bi-bell"></i>
-              {pendingLeaves.length > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#D92D20',
-                }}></span>
-              )}
-            </button>
-
-            {/* Profile Logo */}
-            <div 
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#0C111D',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                fontSize: '14px',
-                cursor: 'pointer',
-                border: '2px solid #E4E7EC'
-              }}
-              title="Admin Profile"
-            >
-              AD
-            </div>
-          </div>
-        </div>
-
-        {/* 3. SCROLLABLE CONTENT BODY */}
-        <div style={styles.contentContainer}>
           
-          {/* Welcome / Meta Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
-            <div>
-              <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '800', color: '#101828', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
-                Welcome Back, Admin
-              </h1>
-              <p style={{ fontSize: '14px', color: '#667085', margin: 0 }}>
-                Every workday, perfectly aligned. Here is the operational summary for today.
-              </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Quick Context Searchable Switcher (Relocated & Upgraded) */}
+            <div 
+              id="custom-switcher"
+              style={{ 
+                position: 'relative',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                backgroundColor: colors.cardBg, 
+                border: `1px solid ${colors.border}`, 
+                padding: '6px 16px', 
+                borderRadius: '24px', 
+                boxShadow: '0 1px 2px rgba(16,24,40,0.05)', 
+                transition: 'all 0.3s',
+                zIndex: 950
+              }}
+            >
+              <span style={{ fontSize: '11px', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="bi bi-person-circle" style={{ color: colors.accent }}></i> Switcher:
+              </span>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="text"
+                  placeholder="Search and choose..."
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '13px',
+                    color: colors.text,
+                    fontWeight: '600',
+                    outline: 'none',
+                    width: '160px',
+                    fontFamily: 'inherit'
+                  }}
+                  value={switcherOpen ? switcherSearch : (employees.find(e => (e.employeeId || e.id) === selectedEmployeeId) ? `${employees.find(e => (e.employeeId || e.id) === selectedEmployeeId).firstName} ${employees.find(e => (e.employeeId || e.id) === selectedEmployeeId).lastName}` : '')}
+                  onChange={(e) => {
+                    setSwitcherSearch(e.target.value);
+                    setSwitcherOpen(true);
+                  }}
+                  onFocus={() => {
+                    setSwitcherOpen(true);
+                    setSwitcherSearch('');
+                  }}
+                />
+                
+                {selectedEmployeeId ? (
+                  <button
+                    type="button"
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: colors.textMuted,
+                      cursor: 'pointer',
+                      padding: '0 2px',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmployeeId('');
+                      setSwitcherSearch('');
+                      setSwitcherOpen(false);
+                    }}
+                    title="Clear Context"
+                  >
+                    <i className="bi bi-x-circle-fill"></i>
+                  </button>
+                ) : (
+                  <i className="bi bi-chevron-down" style={{ fontSize: '10px', color: colors.textMuted }}></i>
+                )}
+              </div>
+
+              {/* SEARCH DROPDOWN MENU */}
+              {switcherOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '42px',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: colors.cardBg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  padding: '6px 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px'
+                }}>
+                  {employees.filter(emp => {
+                    const name = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+                    const q = switcherSearch.toLowerCase();
+                    return name.includes(q) || (emp.employeeId || emp.id).toLowerCase().includes(q);
+                  }).length === 0 ? (
+                    <div style={{ padding: '10px 16px', fontSize: '13px', color: colors.textMuted, textAlign: 'center' }}>
+                      No staff profiles found.
+                    </div>
+                  ) : (
+                    employees.filter(emp => {
+                      const name = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+                      const q = switcherSearch.toLowerCase();
+                      return name.includes(q) || (emp.employeeId || emp.id).toLowerCase().includes(q);
+                    }).map(emp => {
+                      const empId = emp.employeeId || emp.id;
+                      const isSelected = selectedEmployeeId === empId;
+                      return (
+                        <div
+                          key={empId}
+                          onClick={() => {
+                            setSelectedEmployeeId(empId);
+                            setSwitcherOpen(false);
+                            setSwitcherSearch('');
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = darkMode ? '#374151' : '#F2F4F7'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSelected ? (darkMode ? '#1E3A8A' : '#EFF8FF') : 'transparent'}
+                          style={{
+                            padding: '8px 16px',
+                            fontSize: '13px',
+                            color: colors.text,
+                            cursor: 'pointer',
+                            backgroundColor: isSelected ? (darkMode ? '#1E3A8A' : '#EFF8FF') : 'transparent',
+                            fontWeight: isSelected ? '700' : '500',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            transition: 'background-color 0.2s'
+                          }}
+                        >
+                          <span>{emp.firstName} {emp.lastName}</span>
+                          <span style={{ fontSize: '11px', color: colors.textMuted }}>{emp.departmentName || 'Ops'}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
-            
+
             <button 
               onClick={fetchDashboardData}
-              style={{ ...styles.btnPrimary, backgroundColor: '#FFFFFF', color: '#344054', border: '1px solid #D0D5DD', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '24px',
+                padding: '10px 18px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(16,24,40,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = darkMode ? '#374151' : '#F9FAFB'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.cardBg}
             >
               <i className="bi bi-arrow-clockwise"></i> Refresh Data
             </button>
           </div>
+        </div>
 
-          {/* Backend Connection Warning Banner */}
-          {error && (
-            <div style={styles.errorBanner}>
-              <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '20px', color: '#D92D20' }}></i>
+        {/* Backend Connection Warning Banner */}
+        {error && (
+          <div style={styles.errorBanner}>
+            <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '20px' }}></i>
+            <div>
+              <strong style={{ display: 'block', fontWeight: '700', marginBottom: '2px' }}>
+                Microservices Connection Status (Failed to Fetch)
+              </strong>
+              <span>
+                The gateway API at <code>{API_BASE_URL}</code> is currently unreachable. Start the backend microservices to process live database records. Currently viewing layout.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ACTIVE VIEW CONTEXT CARD (SWITCHER PANEL) */}
+        {switcherDetails && (
+          <div style={styles.switcherPanel}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                backgroundColor: darkMode ? '#1E3A8A' : '#EFF8FF',
+                color: darkMode ? '#93C5FD' : '#175CD3',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '16px',
+                transition: 'all 0.3s ease'
+              }}>
+                {switcherDetails.firstName?.[0]}{switcherDetails.lastName?.[0]}
+              </div>
               <div>
-                <strong style={{ display: 'block', fontWeight: '700', marginBottom: '2px' }}>
-                  Microservices Connection Status (Failed to Fetch)
-                </strong>
-                <span>
-                  The gateway API at <code>http://localhost:8080/api</code> is currently unreachable. Start the backend microservices to process live database records. Currently viewing layout.
-                </span>
+                <h4 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: '700', color: colors.text, transition: 'color 0.3s' }}>
+                  Context Snapshot: {switcherDetails.firstName} {switcherDetails.lastName}
+                </h4>
+                <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, transition: 'color 0.3s' }}>
+                  {switcherDetails.designationTitle || 'Staff'} • {switcherDetails.departmentName || 'Operations'}
+                </p>
               </div>
             </div>
-          )}
+            <div style={{ display: 'flex', gap: '16px', fontSize: '13px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div><strong>Phone:</strong> {switcherDetails.phone || 'N/A'}</div>
+              <div><strong>Joining:</strong> {switcherDetails.joiningDate || 'N/A'}</div>
+              <button 
+                style={{
+                  backgroundColor: darkMode ? '#374151' : '#F2F4F7',
+                  color: colors.text,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s'
+                }}
+                onClick={() => setSelectedEmployeeId('')}
+              >
+                Close Context
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* ACTIVE VIEW CONTEXT CARD (SWITCHER PANEL) */}
-          {switcherDetails && (
-            <div style={styles.switcherPanel}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '50%',
-                  backgroundColor: '#EFF8FF',
-                  color: '#175CD3',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  fontSize: '16px'
-                }}>
-                  {switcherDetails.firstName?.[0]}{switcherDetails.lastName?.[0]}
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: '700', color: '#101828' }}>
-                    Context Snapshot: {switcherDetails.firstName} {switcherDetails.lastName}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#667085' }}>
-                    {switcherDetails.designationTitle || 'Staff'} • {switcherDetails.departmentName || 'Operations'}
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '13px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div><strong>Phone:</strong> {switcherDetails.phone || 'N/A'}</div>
-                <div><strong>Joining:</strong> {switcherDetails.joiningDate || 'N/A'}</div>
-                <button 
-                  style={{ ...styles.btnPrimary, backgroundColor: '#F2F4F7', color: '#344054', border: '1px solid #D0D5DD', padding: '6px 12px', fontSize: '12px' }}
-                  onClick={() => setSelectedEmployeeId('')}
-                >
-                  Close Context
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* LOADING STATE */}
-          {loading && employees.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#667085' }}>
-              <div className="spinner-border text-primary" role="status" style={{ marginBottom: '16px', width: '3rem', height: '3rem' }}></div>
-              <span style={{ fontSize: '14px', fontWeight: '500' }}>Synchronizing with Spring Boot endpoints...</span>
-            </div>
-          ) : (
-            <>
-              {/* 4. KPI ROW */}
+        {/* LOADING STATE */}
+        {loading && employees.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: colors.textMuted }}>
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Synchronizing with Spring Boot endpoints...</span>
+          </div>
+        ) : (
+          <>
+            {/* KPI METRIC ROW (Visible on Dashboard Tab) */}
+            {activeTab === 'Dashboard' && (
               <div style={styles.kpiGrid}>
                 {/* Total Employees */}
                 <div 
@@ -887,7 +1076,7 @@ export default function AdminDashboard() {
                     <span style={styles.kpiLabel}>Total Directory</span>
                     <h3 style={styles.kpiValue}>{employees.length}</h3>
                   </div>
-                  <div style={styles.kpiIconBox('#F0F9FF', '#0052CC')}>
+                  <div style={styles.kpiIconBox(colors.kpiIconBg, colors.kpiIconColor)}>
                     <i className="bi bi-people-fill"></i>
                   </div>
                 </div>
@@ -902,7 +1091,7 @@ export default function AdminDashboard() {
                     <span style={styles.kpiLabel}>Present Today</span>
                     <h3 style={styles.kpiValue}>{attendanceCounts.present}</h3>
                   </div>
-                  <div style={styles.kpiIconBox('#ECFDF3', '#027A48')}>
+                  <div style={styles.kpiIconBox(darkMode ? '#0F3C24' : '#ECFDF3', darkMode ? '#86EFAC' : '#027A48')}>
                     <i className="bi bi-person-check-fill"></i>
                   </div>
                 </div>
@@ -917,7 +1106,7 @@ export default function AdminDashboard() {
                     <span style={styles.kpiLabel}>Pending Leaves</span>
                     <h3 style={styles.kpiValue}>{pendingLeaves.length}</h3>
                   </div>
-                  <div style={styles.kpiIconBox('#FFFAE6', '#FFAB00')}>
+                  <div style={styles.kpiIconBox(darkMode ? '#422F00' : '#FFFAE6', darkMode ? '#FFAB00' : '#FF8F00')}>
                     <i className="bi bi-envelope-paper-fill"></i>
                   </div>
                 </div>
@@ -936,29 +1125,35 @@ export default function AdminDashboard() {
                         : 'N/A'}
                     </h3>
                   </div>
-                  <div style={styles.kpiIconBox('#F4F3FF', '#5925DC')}>
+                  <div style={styles.kpiIconBox(darkMode ? '#2E195A' : '#F4F3FF', darkMode ? '#C084FC' : '#5925DC')}>
                     <i className="bi bi-percent"></i>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* 5. MAIN TWO-COLUMN SPLIT GRID */}
+            {/* TAB VIEWS RENDERING */}
+            
+            {/* VIEW 1: DASHBOARD (SPLIT LAYOUT) */}
+            {activeTab === 'Dashboard' && (
               <div style={styles.gridContainer}>
                 
-                {/* LEFT COLUMN: PRIMARY QUEUES */}
+                {/* Left side: Pending Leaves and Employee Directory Snapshot */}
                 <div>
                   
-                  {/* PENDING LEAVE APPROVALS QUEUE */}
+                  {/* Pending Leaves List */}
                   <div style={styles.widgetCard}>
                     <div style={styles.widgetHeader}>
                       <h3 style={styles.widgetTitle}>Pending Leave Requests ({pendingLeaves.length})</h3>
-                      <span style={styles.badge('#EFF8FF', '#175CD3')}>Approvals Queue</span>
+                      <span style={{ ...styles.badge(darkMode ? '#1E3A8A' : '#EFF8FF', darkMode ? '#93C5FD' : '#175CD3'), cursor: 'pointer' }} onClick={() => setActiveTab('Leaves')}>
+                        View Full Queue
+                      </span>
                     </div>
 
                     {pendingLeaves.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '36px 16px', color: '#667085' }}>
+                      <div style={{ textAlign: 'center', padding: '36px 16px', color: colors.textMuted }}>
                         <i className="bi bi-check-circle-fill" style={{ color: '#039855', fontSize: '28px', display: 'block', marginBottom: '10px' }}></i>
-                        <span style={{ fontSize: '14px', fontWeight: '500' }}>No pending leave approvals queue found.</span>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>No pending leave approvals.</span>
                       </div>
                     ) : (
                       <div style={styles.tableResponsiveWrapper}>
@@ -968,88 +1163,23 @@ export default function AdminDashboard() {
                               <th style={styles.tableHeadCell}>Employee</th>
                               <th style={styles.tableHeadCell}>Leave Type</th>
                               <th style={styles.tableHeadCell}>Date Range</th>
-                              <th style={styles.tableHeadCell}>Remarks</th>
-                              <th style={{ ...styles.tableHeadCell, textAlign: 'right' }}>Action Workflow</th>
+                              <th style={{ ...styles.tableHeadCell, textAlign: 'right' }}>Workflow</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {pendingLeaves.map(leave => (
+                            {pendingLeaves.slice(0, 3).map(leave => (
                               <tr key={leave.leaveId || leave.id} style={styles.tableBodyRow}>
                                 <td style={styles.tableBodyCell}>
-                                  <span style={{ fontWeight: '700', color: '#101828' }}>
-                                    {leave.employeeName || `${leave.firstName} ${leave.lastName}` || `ID: ${leave.employeeId}`}
-                                  </span>
+                                  <strong>{leave.employeeName || `${leave.firstName} ${leave.lastName}`}</strong>
                                 </td>
                                 <td style={styles.tableBodyCell}>
-                                  <span style={styles.badge('#F2F4F7', '#344054')}>
-                                    {leave.leaveTypeName || leave.type || 'Time-Off'}
+                                  <span style={styles.badge(darkMode ? '#374151' : '#F2F4F7', colors.text)}>
+                                    {leave.leaveTypeName || leave.type}
                                   </span>
                                 </td>
-                                <td style={styles.tableBodyCell}>
-                                  <span style={{ fontSize: '13px', fontWeight: '500' }}>
-                                    {leave.startDate} to {leave.endDate}
-                                  </span>
-                                </td>
-                                <td style={styles.tableBodyCell}>
-                                  <span style={{ fontStyle: 'italic', fontSize: '13px', color: '#667085' }}>
-                                    "{leave.remarks || 'No remarks provided'}"
-                                  </span>
-                                </td>
+                                <td style={styles.tableBodyCell}>{leave.startDate} to {leave.endDate}</td>
                                 <td style={{ ...styles.tableBodyCell, textAlign: 'right' }}>
-                                  {activeRejectId === (leave.leaveId || leave.id) ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                                      <input
-                                        type="text"
-                                        placeholder="Reason for rejection (mandatory)"
-                                        style={{
-                                          padding: '8px 12px',
-                                          border: '1px solid #FDA29B',
-                                          borderRadius: '6px',
-                                          fontSize: '13px',
-                                          width: '200px',
-                                          outline: 'none',
-                                          boxShadow: '0 1px 2px rgba(16,24,40,0.05)',
-                                        }}
-                                        value={rejectComments[leave.leaveId || leave.id] || ''}
-                                        onChange={(e) => setRejectComments({
-                                          ...rejectComments,
-                                          [leave.leaveId || leave.id]: e.target.value
-                                        })}
-                                      />
-                                      <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button
-                                          style={{ ...styles.btnDanger, padding: '5px 10px', fontSize: '12px' }}
-                                          onClick={() => handleRejectLeave(leave.leaveId || leave.id)}
-                                          disabled={actioningId === (leave.leaveId || leave.id)}
-                                        >
-                                          Confirm Rejection
-                                        </button>
-                                        <button
-                                          style={{ ...styles.btnPrimary, backgroundColor: '#98A2B3', padding: '5px 10px', fontSize: '12px', border: 'none' }}
-                                          onClick={() => setActiveRejectId(null)}
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                      <button
-                                        style={styles.btnSuccess}
-                                        onClick={() => handleApproveLeave(leave.leaveId || leave.id)}
-                                        disabled={actioningId !== null}
-                                      >
-                                        <i className="bi bi-check-lg"></i> Approve
-                                      </button>
-                                      <button
-                                        style={styles.btnDanger}
-                                        onClick={() => setActiveRejectId(leave.leaveId || leave.id)}
-                                        disabled={actioningId !== null}
-                                      >
-                                        <i className="bi bi-x-lg"></i> Reject
-                                      </button>
-                                    </div>
-                                  )}
+                                  <button style={styles.btnSuccess} onClick={() => handleApproveLeave(leave.leaveId || leave.id)}>Approve</button>
                                 </td>
                               </tr>
                             ))}
@@ -1059,283 +1189,173 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* EMPLOYEE LIST SUMMARY WIDGET */}
+                  {/* Directory Snapshot */}
                   <div style={styles.widgetCard}>
                     <div style={styles.widgetHeader}>
                       <h3 style={styles.widgetTitle}>Employee Database Directory</h3>
-                      <span style={{ fontSize: '13px', color: '#667085', fontWeight: '500' }}>
-                        Showing {filteredEmployees.length} profiles
-                      </span>
-                    </div>
-
-                    {/* Filter and Search Bar */}
-                    <div style={styles.filterRow}>
-                      <div style={styles.searchInputWrapper}>
-                        <i className="bi bi-search" style={styles.searchIcon}></i>
-                        <input
-                          type="text"
-                          placeholder="Search directory by name, email or ID..."
-                          style={styles.searchInput}
-                          value={employeeSearch}
-                          onChange={(e) => setEmployeeSearch(e.target.value)}
-                        />
-                      </div>
-                      
-                      <select
-                        style={styles.switcherSelect}
-                        value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
+                      <button 
+                        style={{ background: 'none', border: 'none', color: '#2563EB', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+                        onClick={() => setActiveTab('Directory')}
                       >
-                        {departments.map((dept, index) => (
-                          <option key={index} value={dept}>{dept}</option>
-                        ))}
-                      </select>
+                        View All Directory →
+                      </button>
                     </div>
 
-                    {filteredEmployees.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '40px 16px', color: '#667085' }}>
-                        <i className="bi bi-search-heart" style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}></i>
-                        No employees found matching the current search parameters.
-                      </div>
-                    ) : (
-                      <div style={styles.tableResponsiveWrapper}>
-                        <table style={styles.deelTable}>
-                          <thead>
-                            <tr style={styles.tableHeadRow}>
-                              <th style={styles.tableHeadCell}>Name & Profile</th>
-                              <th style={styles.tableHeadCell}>Department</th>
-                              <th style={styles.tableHeadCell}>Designation</th>
-                              <th style={styles.tableHeadCell}>Account Status</th>
+                    <div style={styles.tableResponsiveWrapper}>
+                      <table style={styles.deelTable}>
+                        <thead>
+                          <tr style={styles.tableHeadRow}>
+                            <th style={styles.tableHeadCell}>Name</th>
+                            <th style={styles.tableHeadCell}>Department</th>
+                            <th style={styles.tableHeadCell}>Designation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {employees.slice(0, 4).map(emp => (
+                            <tr key={emp.employeeId || emp.id} style={styles.tableBodyRow}>
+                              <td style={styles.tableBodyCell}>
+                                <strong>{emp.firstName} {emp.lastName}</strong>
+                              </td>
+                              <td style={styles.tableBodyCell}>{emp.departmentName || emp.deptName || 'N/A'}</td>
+                              <td style={styles.tableBodyCell}>{emp.designationTitle || emp.title || 'N/A'}</td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {filteredEmployees.map(emp => (
-                              <tr key={emp.employeeId || emp.id} style={styles.tableBodyRow}>
-                                <td style={styles.tableBodyCell}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{
-                                      width: '38px',
-                                      height: '38px',
-                                      borderRadius: '50%',
-                                      backgroundColor: '#F2F4F7',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      fontWeight: '700',
-                                      color: '#475467',
-                                      fontSize: '13px'
-                                    }}>
-                                      {emp.firstName?.[0]}{emp.lastName?.[0]}
-                                    </div>
-                                    <div>
-                                      <span style={{ fontWeight: '700', display: 'block', color: '#101828' }}>
-                                        {emp.firstName} {emp.lastName}
-                                      </span>
-                                      <span style={{ fontSize: '12px', color: '#667085' }}>
-                                        ID: {emp.employeeId || emp.id} • {emp.email}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td style={styles.tableBodyCell}>{emp.departmentName || emp.deptName || 'N/A'}</td>
-                                <td style={styles.tableBodyCell}>{emp.designationTitle || emp.title || 'N/A'}</td>
-                                <td style={styles.tableBodyCell}>
-                                  <span style={styles.badge(
-                                    emp.isActive === 'Y' || emp.active ? '#ECFDF3' : '#FEF3F2',
-                                    emp.isActive === 'Y' || emp.active ? '#027A48' : '#B42318'
-                                  )}>
-                                    {emp.isActive === 'Y' || emp.active ? 'Active' : 'Suspended'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                 </div>
 
-                {/* RIGHT COLUMN: SIDE METRICS & TREND CHARTS */}
+                {/* Right side: Attendance breakdown and Mini analytics */}
                 <div>
                   
-                  {/* TODAY'S ATTENDANCE BREAKDOWN */}
+                  {/* Today's Attendance breakdown */}
                   <div style={styles.widgetCard}>
                     <div style={styles.widgetHeader}>
                       <h3 style={styles.widgetTitle}>Attendance Breakdown</h3>
-                      <i className="bi bi-clock" style={{ fontSize: '18px', color: '#667085' }}></i>
                     </div>
                     
                     <div style={styles.progressBarContainer}>
-                      {/* Present */}
                       <div style={styles.progressBarWrapper}>
                         <div style={styles.progressBarLabelRow}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#027A48' }}></span>Present</span>
-                          <strong>
-                            {attendanceCounts.present} ({employees.length > 0 ? Math.round((attendanceCounts.present / employees.length) * 100) : 0}%)
-                          </strong>
+                          <span>Present</span>
+                          <strong>{attendanceCounts.present}</strong>
                         </div>
                         <div style={styles.progressBarTrack}>
-                          <div style={styles.progressBarFill(
-                            employees.length > 0 ? (attendanceCounts.present / employees.length) * 100 : 0, 
-                            '#027A48'
-                          )}></div>
+                          <div style={styles.progressBarFill(employees.length > 0 ? (attendanceCounts.present / employees.length) * 100 : 0, '#027A48')}></div>
                         </div>
                       </div>
 
-                      {/* Half-day */}
                       <div style={styles.progressBarWrapper}>
                         <div style={styles.progressBarLabelRow}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FFAB00' }}></span>Half-Day</span>
-                          <strong>
-                            {attendanceCounts.halfDay} ({employees.length > 0 ? Math.round((attendanceCounts.halfDay / employees.length) * 100) : 0}%)
-                          </strong>
+                          <span>Half-Day</span>
+                          <strong>{attendanceCounts.halfDay}</strong>
                         </div>
                         <div style={styles.progressBarTrack}>
-                          <div style={styles.progressBarFill(
-                            employees.length > 0 ? (attendanceCounts.halfDay / employees.length) * 100 : 0, 
-                            '#FFAB00'
-                          )}></div>
+                          <div style={styles.progressBarFill(employees.length > 0 ? (attendanceCounts.halfDay / employees.length) * 100 : 0, '#FFAB00')}></div>
                         </div>
                       </div>
 
-                      {/* On Leave */}
                       <div style={styles.progressBarWrapper}>
                         <div style={styles.progressBarLabelRow}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#175CD3' }}></span>Approved Leave</span>
-                          <strong>
-                            {attendanceCounts.onLeave} ({employees.length > 0 ? Math.round((attendanceCounts.onLeave / employees.length) * 100) : 0}%)
-                          </strong>
+                          <span>Absent</span>
+                          <strong>{attendanceCounts.absent}</strong>
                         </div>
                         <div style={styles.progressBarTrack}>
-                          <div style={styles.progressBarFill(
-                            employees.length > 0 ? (attendanceCounts.onLeave / employees.length) * 100 : 0, 
-                            '#175CD3'
-                          )}></div>
-                        </div>
-                      </div>
-
-                      {/* Absent */}
-                      <div style={styles.progressBarWrapper}>
-                        <div style={styles.progressBarLabelRow}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#B42318' }}></span>Absent</span>
-                          <strong>
-                            {attendanceCounts.absent} ({employees.length > 0 ? Math.round((attendanceCounts.absent / employees.length) * 100) : 0}%)
-                          </strong>
-                        </div>
-                        <div style={styles.progressBarTrack}>
-                          <div style={styles.progressBarFill(
-                            employees.length > 0 ? (attendanceCounts.absent / employees.length) * 100 : 0, 
-                            '#B42318'
-                          )}></div>
+                          <div style={styles.progressBarFill(employees.length > 0 ? (attendanceCounts.absent / employees.length) * 100 : 0, '#B42318')}></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* ANALYTICS TREND GRAPHS */}
+                  {/* SVG mini trends */}
                   <div style={styles.widgetCard}>
-                    <div style={styles.widgetHeader}>
-                      <h3 style={styles.widgetTitle}>Historical Trends</h3>
-                      <i className="bi bi-bar-chart-line" style={{ fontSize: '18px', color: '#667085' }}></i>
+                    <h3 style={{ ...styles.widgetTitle, marginBottom: '20px' }}>Weekly Attendance</h3>
+                    <div style={{ border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '16px 12px', backgroundColor: colors.chartBg, transition: 'all 0.3s' }}>
+                      <svg viewBox="0 0 300 100" style={{ width: '100%', height: '80px' }}>
+                        <line x1="0" y1="20" x2="300" y2="20" stroke={darkMode ? '#374151' : '#F2F4F7'} />
+                        <line x1="0" y1="50" x2="300" y2="50" stroke={darkMode ? '#374151' : '#F2F4F7'} />
+                        <line x1="0" y1="80" x2="300" y2="80" stroke={darkMode ? '#374151' : '#F2F4F7'} />
+                        <path d="M 10 30 L 58 20 L 106 45 L 154 23 L 202 15 L 250 80 L 290 70" fill="none" stroke="#2563EB" strokeWidth="2.5" />
+                        <circle cx="10" cy="30" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="58" cy="20" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="106" cy="45" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="154" cy="23" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="202" cy="15" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="250" cy="80" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                        <circle cx="290" cy="70" r="4" fill={colors.cardBg} stroke="#2563EB" strokeWidth="2" />
+                      </svg>
                     </div>
-
-                    {/* SVG Line Chart */}
-                    <div style={{ marginBottom: '24px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475467', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                        Weekly Attendance Rate
-                      </span>
-                      
-                      <div style={{ border: '1px solid #EAECF0', borderRadius: '8px', padding: '16px 12px', backgroundColor: '#FCFCFD' }}>
-                        <svg viewBox="0 0 300 100" style={{ width: '100%', height: '90px' }}>
-                          {/* Grid Lines */}
-                          <line x1="0" y1="20" x2="300" y2="20" stroke="#F2F4F7" strokeWidth="1" />
-                          <line x1="0" y1="50" x2="300" y2="50" stroke="#F2F4F7" strokeWidth="1" />
-                          <line x1="0" y1="80" x2="300" y2="80" stroke="#F2F4F7" strokeWidth="1" />
-                          
-                          {/* Trend Line Gradient */}
-                          <defs>
-                            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2"/>
-                              <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0"/>
-                            </linearGradient>
-                          </defs>
-
-                          {/* Gradient Fill under Line */}
-                          <path
-                            d="M 10 30 L 58 20 L 106 45 L 154 23 L 202 15 L 250 80 L 290 70 L 290 80 L 10 80 Z"
-                            fill="url(#lineGrad)"
-                          />
-
-                          {/* Trend Line (Data Points: Mon 92%, Tue 95%, Wed 88%, Thu 94%, Fri 96%, Sat 75%, Sun 80%) */}
-                          <path
-                            d="M 10 30 L 58 20 L 106 45 L 154 23 L 202 15 L 250 80 L 290 70"
-                            fill="none"
-                            stroke="#2563EB"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          
-                          {/* Trend Points */}
-                          <circle cx="10" cy="30" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="58" cy="20" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="106" cy="45" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="154" cy="23" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="202" cy="15" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="250" cy="80" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-                          <circle cx="290" cy="70" r="4.5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2" />
-
-                          {/* Day Labels */}
-                          <text x="10" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">M</text>
-                          <text x="58" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">T</text>
-                          <text x="106" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">W</text>
-                          <text x="154" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">T</text>
-                          <text x="202" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">F</text>
-                          <text x="250" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">S</text>
-                          <text x="290" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">S</text>
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* SVG Bar Chart */}
-                    <div>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475467', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                        Monthly Leave Volumes
-                      </span>
-                      
-                      <div style={{ border: '1px solid #EAECF0', borderRadius: '8px', padding: '16px 12px', backgroundColor: '#FCFCFD' }}>
-                        <svg viewBox="0 0 300 100" style={{ width: '100%', height: '90px' }}>
-                          {/* Bars for May, Jun, Jul, Aug */}
-                          {/* May */}
-                          <rect x="40" y="45" width="24" height="40" rx="4" fill="#0052CC" opacity="0.8" />
-                          {/* Jun */}
-                          <rect x="100" y="25" width="24" height="60" rx="4" fill="#2563EB" />
-                          {/* Jul */}
-                          <rect x="160" y="60" width="24" height="25" rx="4" fill="#0052CC" opacity="0.8" />
-                          {/* Aug */}
-                          <rect x="220" y="15" width="24" height="70" rx="4" fill="#2563EB" />
-
-                          {/* Base line */}
-                          <line x1="10" y1="85" x2="290" y2="85" stroke="#EAECF0" strokeWidth="1" />
-
-                          {/* Month Labels */}
-                          <text x="52" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">May</text>
-                          <text x="112" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">Jun</text>
-                          <text x="172" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">Jul</text>
-                          <text x="232" y="96" fontSize="9" fontWeight="600" fill="#98A2B3" textAnchor="middle">Aug</text>
-                        </svg>
-                      </div>
-                    </div>
-
                   </div>
 
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            )}
+
+            {/* VIEW 2: DIRECTORY */}
+            {activeTab === 'Directory' && (
+              <EmployeeList 
+                employees={employees} 
+                setEmployees={setEmployees} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+
+            {/* VIEW 3: ATTENDANCE */}
+            {activeTab === 'Attendance' && (
+              <AdminAttendance 
+                attendance={attendance} 
+                setAttendance={setAttendance} 
+                employees={employees} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+
+            {/* VIEW 4: LEAVES */}
+            {activeTab === 'Leaves' && (
+              <LeaveApprovals 
+                leaves={leaves} 
+                setLeaves={setLeaves} 
+                employees={employees} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+
+            {/* VIEW 5: PAYROLL */}
+            {activeTab === 'Payroll' && (
+              <AdminPayroll 
+                employees={employees} 
+                setEmployees={setEmployees} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+
+            {/* VIEW 6: REPORTS / ANALYTICS */}
+            {activeTab === 'Reports' && (
+              <Reports 
+                employees={employees} 
+                leaves={leaves} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+
+            {/* VIEW 7: NOTIFICATIONS / BROADCAST */}
+            {activeTab === 'Notifications' && (
+              <Notifications 
+                notifications={notifications} 
+                setNotifications={setNotifications} 
+                darkMode={darkMode} 
+                colors={colors} 
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );
