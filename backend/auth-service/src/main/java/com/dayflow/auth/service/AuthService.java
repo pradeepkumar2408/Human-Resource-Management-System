@@ -47,12 +47,57 @@ public class AuthService {
         return String.valueOf(otp);
     }
 
-    // 1. POST /signup
+    // 1. POST /login (Validates email, password, and role against Oracle DB)
+    public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        String password = request.getPassword();
+        String requestedRole = request.getRole();
+
+        AppUser appUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found registered with this email address. Please sign up or check your credentials."));
+
+        // Verify BCrypt password
+        if (!passwordEncoder.matches(password, appUser.getPasswordHash()) && !password.equals(appUser.getPasswordHash())) {
+            throw new IllegalArgumentException("Invalid password. Please check your credentials.");
+        }
+
+        String userRole = appUser.getRole() != null ? appUser.getRole().getRoleName() : "EMPLOYEE";
+
+        // Verify Role if specified by user
+        if (requestedRole != null && !requestedRole.trim().isEmpty()) {
+            if (!userRole.equalsIgnoreCase(requestedRole.trim())) {
+                throw new IllegalArgumentException("Access Denied: Your account role (" + userRole + ") does not match requested role (" + requestedRole + ").");
+            }
+        }
+
+        // Generate real signed JWT token
+        String accessToken = jwtUtils.generateAccessToken(appUser.getEmail(), appUser.getUserId(), userRole);
+        String refreshToken = jwtUtils.generateRefreshToken(appUser.getEmail());
+
+        UserDto userDto = UserDto.builder()
+                .id(appUser.getUserId())
+                .email(appUser.getEmail())
+                .firstName(userRole.equalsIgnoreCase("ADMIN") ? "Admin" : "Employee")
+                .lastName("User")
+                .role(userRole)
+                .department("Engineering")
+                .build();
+
+        return LoginResponse.builder()
+                .token(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .message("Login successful! Redirecting to dashboard...")
+                .user(userDto)
+                .build();
+    }
+
+    // 2. POST /signup
     public ApiResponse signup(SignUpRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("An account with email " + email + " already exists in the database.");
+            throw new IllegalArgumentException("An account with email address " + email + " is already registered.");
         }
 
         String roleStr = request.getRole() != null ? request.getRole() : (request.getRoleName() != null ? request.getRoleName() : "EMPLOYEE");
@@ -62,7 +107,6 @@ public class AuthService {
         Role role = roleRepository.findByRoleName(finalRoleStr)
                 .orElseGet(() -> roleRepository.save(Role.builder().roleName(finalRoleStr).build()));
 
-        // BCrypt Password Hashing
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
         Long employeeIdVal = null;
@@ -73,7 +117,6 @@ public class AuthService {
             } catch (Exception ignored) {}
         }
 
-        // Store User in Oracle DB
         AppUser appUser = AppUser.builder()
                 .employeeId(employeeIdVal)
                 .email(email)
@@ -85,73 +128,33 @@ public class AuthService {
 
         userRepository.save(appUser);
 
-        // Generate Real 6-Digit OTP and dispatch to inbox via Gmail SMTP
+        // Generate OTP and send email via Gmail SMTP
         String otpCode = generateNumericOtp();
         otpStore.storeOtp(email, otpCode);
 
         emailService.sendOtpEmail(
             email, 
             otpCode, 
-            "Dayflow HRMS - Account Verification OTP", 
-            "Thank you for registering with Dayflow HRMS."
+            "Dayflow HRMS - Verification Code", 
+            "Welcome to Dayflow HRMS. Here is your verification OTP code:"
         );
 
-        return new ApiResponse(true, 
-            "Employee account registered & stored in Oracle DB. Verification OTP sent to " + email,
-            otpCode);
+        return new ApiResponse(true, "Account registered successfully in Oracle DB! Verification OTP code sent to " + email, otpCode);
     }
 
-    // 2. POST /verify-email
-    public ApiResponse verifyEmail(VerifyEmailRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        String inputOtp = request.getToken() != null ? request.getToken() : request.getOtp();
-
-        AppUser appUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User account " + email + " not found in database."));
-
-        if (!otpStore.validateOtp(email, inputOtp)) {
-            throw new IllegalArgumentException("Invalid or expired OTP code. Please check your email inbox and try again.");
-        }
-
-        // Update verification status in Oracle DB
-        appUser.setIsEmailVerified("Y");
-        userRepository.save(appUser);
-        otpStore.removeOtp(email);
-
-        return new ApiResponse(true, "Email address verified successfully in Oracle DB! You can now log in.");
-    }
-
-    // 3. POST /resend-verification
-    public ApiResponse resendVerification(ResendVerificationRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-
-        AppUser appUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("No account registered with email " + email));
-
-        String otpCode = generateNumericOtp();
-        otpStore.storeOtp(email, otpCode);
-
-        emailService.sendOtpEmail(
-            email, 
-            otpCode, 
-            "Dayflow HRMS - Resend Verification OTP", 
-            "Here is your new 6-digit verification code:"
-        );
-
-        return new ApiResponse(true, "A new 6-digit OTP verification code has been sent to " + email);
-    }
-
-    // 4. POST /forgot-password (Stage 1)
+    // 3. POST /forgot-password (Checks if mail exists in Oracle DB, sends OTP to mail)
     public ApiResponse forgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
+        // Check if email exists in Oracle 11g database
         AppUser appUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("No account found registered with email " + email + " in Oracle DB."));
+                .orElseThrow(() -> new IllegalArgumentException("No account registered with email address " + email + ". Please check the email address."));
 
-        // Generate Real 6-Digit OTP and dispatch to user inbox via Gmail SMTP
+        // Generate 6-digit OTP code & store
         String otpCode = generateNumericOtp();
         otpStore.storeOtp(email, otpCode);
 
+        // Send OTP from alonewarrior123456@gmail.com to user's registered email inbox
         emailService.sendOtpEmail(
             email, 
             otpCode, 
@@ -159,19 +162,21 @@ public class AuthService {
             "You requested a password reset for your Dayflow HRMS account."
         );
 
-        return new ApiResponse(true, "A 6-digit OTP code has been sent to your email inbox: " + email);
+        return new ApiResponse(true, "A 6-digit OTP code has been sent to your registered email address: " + email);
     }
 
-    // 5. POST /verify-reset-otp (Stage 2 for ForgotPassword.jsx)
+    // 4. POST /verify-reset-otp (Validates OTP code)
     public Map<String, Object> verifyResetOtp(VerifyResetOtpRequest request) {
         String email = request.getEmail().trim().toLowerCase();
         String inputOtp = request.getOtp() != null ? request.getOtp() : request.getToken();
 
-        AppUser appUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User account not found in database."));
+        // Ensure user exists
+        userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account registered with email address " + email));
 
+        // Validate OTP code
         if (!otpStore.validateOtp(email, inputOtp)) {
-            throw new IllegalArgumentException("Invalid or expired OTP code. Please check your inbox and try again.");
+            throw new IllegalArgumentException("Invalid or expired OTP code. Please check your email inbox and try again.");
         }
 
         String resetToken = "RESET_TOKEN_" + UUID.randomUUID().toString().replace("-", "").toUpperCase();
@@ -179,23 +184,22 @@ public class AuthService {
 
         return Map.of(
             "success", true,
-            "message", "OTP verified successfully!",
+            "message", "OTP verified successfully! You can now set your new password.",
             "resetToken", resetToken,
             "token", resetToken
         );
     }
 
-    // 6. POST /reset-password (Stage 3 for ForgotPassword.jsx)
+    // 5. POST /reset-password (Updates password in Oracle DB)
     public ApiResponse resetPassword(ResetPasswordRequest request) {
         String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
-        
-        AppUser appUser;
-        if (!email.isEmpty()) {
-            appUser = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("User account not found in Oracle DB."));
-        } else {
+
+        if (email.isEmpty()) {
             throw new IllegalArgumentException("Email address is required for password reset.");
         }
+
+        AppUser appUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User account not found in Oracle DB."));
 
         if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
             throw new IllegalArgumentException("New password must be at least 6 characters long.");
@@ -209,43 +213,40 @@ public class AuthService {
         otpStore.removeOtp(email);
         otpStore.removeOtp("reset_" + email);
 
-        return new ApiResponse(true, "Password updated and stored in Oracle DB successfully! You can now log in.");
+        return new ApiResponse(true, "Password has been updated in database successfully! Redirecting to sign in...");
     }
 
-    // 7. POST /login
-    public LoginResponse login(LoginRequest request) {
+    // 6. POST /verify-email
+    public ApiResponse verifyEmail(VerifyEmailRequest request) {
         String email = request.getEmail().trim().toLowerCase();
-        String password = request.getPassword();
+        String inputOtp = request.getToken() != null ? request.getToken() : request.getOtp();
 
         AppUser appUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials. Account does not exist in Oracle DB."));
+                .orElseThrow(() -> new IllegalArgumentException("User account not found in database."));
 
-        // BCrypt Password Verification against Oracle DB
-        if (!passwordEncoder.matches(password, appUser.getPasswordHash()) && !password.equals(appUser.getPasswordHash())) {
-            throw new IllegalArgumentException("Invalid credentials or incorrect password.");
+        if (!otpStore.validateOtp(email, inputOtp)) {
+            throw new IllegalArgumentException("Invalid or expired OTP code.");
         }
 
-        String roleName = appUser.getRole() != null ? appUser.getRole().getRoleName() : "EMPLOYEE";
+        appUser.setIsEmailVerified("Y");
+        userRepository.save(appUser);
+        otpStore.removeOtp(email);
 
-        // Issue JWT Access Token & Refresh Token
-        String accessToken = jwtUtils.generateAccessToken(appUser.getEmail(), appUser.getUserId(), roleName);
-        String refreshToken = jwtUtils.generateRefreshToken(appUser.getEmail());
+        return new ApiResponse(true, "Email address verified successfully in Oracle DB!");
+    }
 
-        UserDto userDto = UserDto.builder()
-                .id(appUser.getUserId())
-                .email(appUser.getEmail())
-                .firstName(roleName.equalsIgnoreCase("ADMIN") ? "Admin" : "Employee")
-                .lastName("User")
-                .role(roleName)
-                .department("Engineering")
-                .build();
+    // 7. POST /resend-verification
+    public ApiResponse resendVerification(ResendVerificationRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
 
-        return LoginResponse.builder()
-                .token(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .message("Login successful")
-                .user(userDto)
-                .build();
+        userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account registered with email " + email));
+
+        String otpCode = generateNumericOtp();
+        otpStore.storeOtp(email, otpCode);
+
+        emailService.sendOtpEmail(email, otpCode, "Dayflow HRMS - Verification Code", "Here is your new OTP code:");
+
+        return new ApiResponse(true, "A new OTP code has been sent to " + email);
     }
 }

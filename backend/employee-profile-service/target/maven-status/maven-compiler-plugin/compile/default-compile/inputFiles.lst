@@ -1,0 +1,10 @@
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\controller\EmployeeController.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\EmployeeProfileApplication.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\entity\Address.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\entity\Department.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\entity\Designation.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\entity\Document.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\entity\Employee.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\repository\DocumentRepository.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\repository\EmployeeRepository.java
+C:\odoo project\Human-Resource-Management-System\backend\employee-profile-service\src\main\java\com\dayflow\employee\service\EmployeeService.java
