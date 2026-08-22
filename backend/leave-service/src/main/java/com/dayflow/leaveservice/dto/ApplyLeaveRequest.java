@@ -14,8 +14,8 @@ import java.time.LocalDate;
 @Builder
 public class ApplyLeaveRequest {
 
-    @NotNull(message = "Employee ID is required")
-    private Long employeeId;
+    @NotBlank(message = "Employee ID is required")
+    private String employeeId;
 
     @NotNull(message = "Start date is required")
     private LocalDate startDate;

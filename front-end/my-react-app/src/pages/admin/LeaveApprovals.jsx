@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE_URL = 'http://localhost:8111/api';
+
 export default function LeaveApprovals({ leaves, setLeaves, employees, darkMode, colors }) {
   // Filters state
   const [employeeFilter, setEmployeeFilter] = useState('All');
@@ -147,45 +149,75 @@ export default function LeaveApprovals({ leaves, setLeaves, employees, darkMode,
   });
 
   // Action: Approve
-  const handleApprove = (leaveId) => {
-    setLeaves(prev => prev.map(leave => {
-      const id = leave.leaveId || leave.id;
-      if (id === leaveId) {
-        return {
-          ...leave,
-          status: 'Approved',
-          leaveStatusName: 'Approved',
-          remarks: leave.remarks ? `${leave.remarks} (Approved by Admin)` : 'Approved by Admin'
-        };
+  const handleApprove = async (leaveId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/leaves/${leaveId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: 'Approved by Admin' })
+      });
+
+      if (res.ok) {
+        setLeaves(prev => prev.map(leave => {
+          const id = leave.leaveId || leave.id;
+          if (id === leaveId) {
+            return {
+              ...leave,
+              status: 'Approved',
+              leaveStatusName: 'Approved',
+              remarks: leave.remarks ? `${leave.remarks} (Approved by Admin)` : 'Approved by Admin'
+            };
+          }
+          return leave;
+        }));
+        alert('Leave approved successfully.');
+      } else {
+        alert('Failed to approve leave in backend.');
       }
-      return leave;
-    }));
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   // Action: Reject
-  const handleReject = (leaveId) => {
+  const handleReject = async (leaveId) => {
     const comment = rejectComments[leaveId];
     if (!comment || !comment.trim()) {
       alert('A rejection reason comment is mandatory.');
       return;
     }
 
-    setLeaves(prev => prev.map(leave => {
-      const id = leave.leaveId || leave.id;
-      if (id === leaveId) {
-        return {
-          ...leave,
-          status: 'Rejected',
-          leaveStatusName: 'Rejected',
-          remarks: `Rejected by Admin: "${comment}"`
-        };
-      }
-      return leave;
-    }));
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/leaves/${leaveId}/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: comment.trim() })
+      });
 
-    // Reset local reject state
-    setRejectComments(prev => ({ ...prev, [leaveId]: '' }));
-    setActiveRejectId(null);
+      if (res.ok) {
+        setLeaves(prev => prev.map(leave => {
+          const id = leave.leaveId || leave.id;
+          if (id === leaveId) {
+            return {
+              ...leave,
+              status: 'Rejected',
+              leaveStatusName: 'Rejected',
+              remarks: `Rejected by Admin: "${comment}"`
+            };
+          }
+          return leave;
+        }));
+        setRejectComments(prev => ({ ...prev, [leaveId]: '' }));
+        setActiveRejectId(null);
+        alert('Leave rejected successfully.');
+      } else {
+        alert('Failed to reject leave in backend.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   return (

@@ -4,6 +4,8 @@ C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeOnboardRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeResponse.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\LoginRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\LoginResponse.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\SetPasswordRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\SignUpRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\entity\Address.java

@@ -7,7 +7,7 @@ import Reports from './Reports';
 import Notifications from './Notifications';
 
 // API Base URL (Configurable to gateway or host)
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8111/api';
 
 export default function AdminDashboard() {
   // Screen Width Listener for Responsive Layouts
@@ -163,13 +163,28 @@ export default function AdminDashboard() {
   }, [selectedEmployeeId, employees]);
 
   // Quick Approve Leave Handler (Dashboard Specific widget action)
-  const handleApproveLeave = (leaveId) => {
-    setLeaves(prev => prev.map(leave => {
-      if ((leave.leaveId || leave.id) === leaveId) {
-        return { ...leave, status: 'Approved', leaveStatusName: 'Approved' };
+  const handleApproveLeave = async (leaveId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/leaves/${leaveId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: 'Approved from Dashboard Quick Action' })
+      });
+      if (res.ok) {
+        setLeaves(prev => prev.map(leave => {
+          if ((leave.leaveId || leave.id) === leaveId) {
+            return { ...leave, status: 'Approved', leaveStatusName: 'Approved' };
+          }
+          return leave;
+        }));
+        alert('Leave approved successfully.');
+      } else {
+        alert('Failed to approve leave request.');
       }
-      return leave;
-    }));
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   // Counts based on today's attendance records

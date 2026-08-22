@@ -28,4 +28,10 @@ public class AuthController {
             "message", "Account activated successfully! Your password has been configured."
         ));
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<com.dayflow.adminemployeeservice.dto.LoginResponse> login(@Valid @RequestBody com.dayflow.adminemployeeservice.dto.LoginRequest request) {
+        com.dayflow.adminemployeeservice.dto.LoginResponse response = employeeService.login(request);
+        return ResponseEntity.ok(response);
+    }
 }

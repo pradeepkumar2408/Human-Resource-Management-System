@@ -8,11 +8,14 @@ com\dayflow\adminemployeeservice\entity\AppUser.class
 com\dayflow\adminemployeeservice\entity\Department$DepartmentBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$AddressDto.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$ManagerDto.class
+com\dayflow\adminemployeeservice\dto\LoginRequest$LoginRequestBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$RoleDto$RoleDtoBuilder.class
 com\dayflow\adminemployeeservice\entity\Address$AddressBuilder.class
+com\dayflow\adminemployeeservice\dto\LoginResponse.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$EmployeeResponseBuilder.class
 com\dayflow\adminemployeeservice\entity\Department.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$DepartmentDto.class
+com\dayflow\adminemployeeservice\dto\LoginRequest.class
 com\dayflow\adminemployeeservice\entity\Address.class
 com\dayflow\adminemployeeservice\entity\Employee.class
 com\dayflow\adminemployeeservice\repository\AppUserRepository.class
@@ -23,11 +26,13 @@ com\dayflow\adminemployeeservice\exception\EmailAlreadyExistsException.class
 com\dayflow\adminemployeeservice\dto\EmployeeOnboardRequest.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$DesignationDto$DesignationDtoBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$DepartmentDto$DepartmentDtoBuilder.class
+com\dayflow\adminemployeeservice\dto\LoginResponse$UserDto$UserDtoBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest$EmployeeUpdateRequestBuilder.class
 com\dayflow\adminemployeeservice\entity\Employee$EmployeeBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeOnboardRequest$EmployeeOnboardRequestBuilder.class
 com\dayflow\adminemployeeservice\service\EmployeeService.class
 com\dayflow\adminemployeeservice\AdminEmployeeApplication.class
+com\dayflow\adminemployeeservice\dto\LoginResponse$LoginResponseBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$RoleDto.class
 com\dayflow\adminemployeeservice\entity\AppUser$AppUserBuilder.class
 com\dayflow\adminemployeeservice\dto\SetPasswordRequest$SetPasswordRequestBuilder.class
@@ -47,4 +52,5 @@ com\dayflow\adminemployeeservice\controller\AdminEmployeeController.class
 com\dayflow\adminemployeeservice\dto\SetPasswordRequest.class
 com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse.class
+com\dayflow\adminemployeeservice\dto\LoginResponse$UserDto.class
 com\dayflow\adminemployeeservice\repository\DesignationRepository.class

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE_URL = 'http://localhost:8111/api';
+
 export default function AdminPayroll({ employees, setEmployees, darkMode, colors }) {
   // Active editing payroll states
   const [editingEmp, setEditingEmp] = useState(null);
@@ -146,14 +148,30 @@ export default function AdminPayroll({ employees, setEmployees, darkMode, colors
     }
   };
 
-  // Run Bulk Payroll Generator simulation
-  const handleRunPayroll = () => {
+  // Run Bulk Payroll Generator
+  const handleRunPayroll = async () => {
     setRunningPayroll(true);
-    setTimeout(() => {
+    const currentPeriod = new Date().toISOString().substring(0, 7); // e.g. "2026-08"
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/payroll/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payPeriod: currentPeriod })
+      });
+
+      if (res.ok) {
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.message || 'Failed to generate payroll batch.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    } finally {
       setRunningPayroll(false);
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 3000);
-    }, 2000);
+    }
   };
 
   // Edit structure dialog trigger
@@ -161,31 +179,51 @@ export default function AdminPayroll({ employees, setEmployees, darkMode, colors
     setEditingEmp(emp);
     const sal = emp.salary || { basic: 0, hra: 0, allowances: 0, deductions: 0 };
     setSalaryStructure({
-      basic: sal.basic || 0,
+      basic: sal.basicSalary || sal.basic || 0,
       hra: sal.hra || 0,
       allowances: sal.allowances || 0,
       deductions: sal.deductions || 0
     });
   };
 
-  // Save structure changes back to parent employee state
-  const handleSaveStructure = (e) => {
+  // Save structure changes to database
+  const handleSaveStructure = async (e) => {
     e.preventDefault();
-    setEmployees(prev => prev.map(emp => {
-      if ((emp.employeeId || emp.id) === (editingEmp.employeeId || editingEmp.id)) {
-        return {
-          ...emp,
-          salary: {
-            basic: Number(salaryStructure.basic),
-            hra: Number(salaryStructure.hra),
-            allowances: Number(salaryStructure.allowances),
-            deductions: Number(salaryStructure.deductions)
+    const empId = editingEmp.employeeId || editingEmp.id;
+    const payload = {
+      basicSalary: Number(salaryStructure.basic),
+      hra: Number(salaryStructure.hra),
+      allowances: Number(salaryStructure.allowances),
+      deductions: Number(salaryStructure.deductions)
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/payroll/salary-structure/${empId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const savedStructure = await res.json();
+        setEmployees(prev => prev.map(emp => {
+          if ((emp.employeeId || emp.id) === empId) {
+            return {
+              ...emp,
+              salary: savedStructure
+            };
           }
-        };
+          return emp;
+        }));
+        setEditingEmp(null);
+        alert('Salary structure updated successfully in database.');
+      } else {
+        alert('Failed to update salary structure in database.');
       }
-      return emp;
-    }));
-    setEditingEmp(null);
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   return (

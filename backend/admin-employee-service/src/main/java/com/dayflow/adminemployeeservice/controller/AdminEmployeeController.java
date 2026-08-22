@@ -45,22 +45,15 @@ public class AdminEmployeeController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<EmployeeResponse>> getEmployees(
+    public ResponseEntity<java.util.List<EmployeeResponse>> getEmployees(
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long designationId,
-            @RequestParam(required = false) Boolean isActive,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "employeeId") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
+            @RequestParam(required = false) Boolean isActive) {
         
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        PageRequest pageRequest = PageRequest.of(page, size, sort);
-        
-        Page<EmployeeResponse> response = employeeService.getEmployees(
-                firstName, lastName, departmentId, designationId, isActive, pageRequest);
+        java.util.List<EmployeeResponse> response = employeeService.getEmployees(
+                firstName, lastName, departmentId, designationId, isActive);
         return ResponseEntity.ok(response);
     }
 

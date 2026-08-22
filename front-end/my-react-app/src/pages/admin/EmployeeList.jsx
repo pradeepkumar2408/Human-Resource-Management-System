@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import EmployeeDetails from './EmployeeDetails';
 
+const API_BASE_URL = 'http://localhost:8111/api';
+
 export default function EmployeeList({ employees, setEmployees, darkMode, colors }) {
   // Directory state
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -10,16 +12,9 @@ export default function EmployeeList({ employees, setEmployees, darkMode, colors
   // Onboarding modal/drawer state
   const [isAdding, setIsAdding] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
-    firstName: '',
-    lastName: '',
+    employeeId: '',
     email: '',
-    phone: '',
-    departmentName: 'Engineering',
-    designationTitle: 'Software Engineer',
-    joiningDate: new Date().toISOString().split('T')[0],
-    managerName: '',
-    role: 'Employee',
-    salary: { basic: 50000, hra: 20000, allowances: 10000, deductions: 5000 }
+    role: 'Employee'
   });
 
   // Drill-down selected state
@@ -210,61 +205,127 @@ export default function EmployeeList({ employees, setEmployees, darkMode, colors
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
 
   // Add Employee Form Handlers
-  const handleAddEmployeeSubmit = (e) => {
+  const handleAddEmployeeSubmit = async (e) => {
     e.preventDefault();
-    if (!newEmployee.firstName || !newEmployee.lastName || !newEmployee.email) {
-      alert('First Name, Last Name, and Corporate Email are mandatory fields.');
+    if (!newEmployee.employeeId || !newEmployee.email) {
+      alert('Employee ID and Corporate Email are mandatory fields.');
       return;
     }
-    const newId = `EMP00${employees.length + 1}`;
-    const entry = {
-      id: newId,
-      employeeId: newId,
-      ...newEmployee,
-      active: true,
-      isActive: 'Y',
-      documents: { aadhar: 'Pending', pan: 'Pending', offerLetter: 'Uploaded' }
+
+    const payload = {
+      employeeId: newEmployee.employeeId.trim(),
+      email: newEmployee.email.trim(),
+      role: newEmployee.role === 'HR' ? 'ADMIN' : 'EMPLOYEE'
     };
-    setEmployees(prev => [entry, ...prev]);
-    setIsAdding(false);
-    // Reset onboarding form
-    setNewEmployee({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      departmentName: 'Engineering',
-      designationTitle: 'Software Engineer',
-      joiningDate: new Date().toISOString().split('T')[0],
-      managerName: '',
-      role: 'Employee',
-      salary: { basic: 50000, hra: 20000, allowances: 10000, deductions: 5000 }
-    });
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const savedEmp = await res.json();
+        setEmployees(prev => [savedEmp, ...prev]);
+        setIsAdding(false);
+        setNewEmployee({
+          employeeId: '',
+          email: '',
+          role: 'Employee'
+        });
+        alert('Employee onboarded successfully! Invitation activation email sent.');
+      } else {
+        const errData = await res.json().catch(() => null);
+        alert(errData?.message || 'Failed to onboard employee.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error connecting to API gateway.');
+    }
   };
 
   // Toggle Activation from Row Actions
-  const handleToggleActivation = (id, currentStatus) => {
-    setEmployees(prev => prev.map(emp => {
-      if ((emp.employeeId || emp.id) === id) {
-        return {
-          ...emp,
-          active: !currentStatus,
-          isActive: !currentStatus ? 'Y' : 'N'
-        };
+  const handleToggleActivation = async (id, currentStatus) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/employees/${id}/status?active=${!currentStatus}`, {
+        method: 'PUT'
+      });
+
+      if (res.ok) {
+        setEmployees(prev => prev.map(emp => {
+          if ((emp.employeeId || emp.id) === id) {
+            return {
+              ...emp,
+              active: !currentStatus,
+              isActive: !currentStatus ? 'Y' : 'N'
+            };
+          }
+          return emp;
+        }));
+        alert(`Account status updated successfully to ${!currentStatus ? 'Active' : 'Suspended'}.`);
+      } else {
+        alert('Failed to update account status in backend.');
       }
-      return emp;
-    }));
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   // Save changes from details view context
-  const handleSaveDetails = (updatedEmp) => {
-    setEmployees(prev => prev.map(emp => {
-      if ((emp.employeeId || emp.id) === (updatedEmp.employeeId || updatedEmp.id)) {
-        return updatedEmp;
+  const handleSaveDetails = async (updatedEmp) => {
+    const deptMap = {
+      'Engineering': 1,
+      'HR & Talent': 2,
+      'Human Resources': 2,
+      'Finance': 3,
+      'Marketing': 4,
+      'Operations': 3
+    };
+
+    const title = (updatedEmp.designationTitle || updatedEmp.title || '').toLowerCase();
+    let designationId = 1;
+    if (title.includes('hr') || title.includes('talent')) designationId = 2;
+    else if (title.includes('finance') || title.includes('analyst')) designationId = 3;
+    else if (title.includes('marketing') || title.includes('specialist')) designationId = 4;
+
+    const payload = {
+      firstName: updatedEmp.firstName || 'First',
+      lastName: updatedEmp.lastName || 'Last',
+      phone: updatedEmp.phone || '',
+      joiningDate: updatedEmp.joiningDate || new Date().toISOString().split('T')[0],
+      roleId: updatedEmp.role === 'HR' ? 2 : 1,
+      departmentId: deptMap[updatedEmp.departmentName] || 1,
+      designationId: designationId
+    };
+
+    try {
+      const empId = updatedEmp.employeeId || updatedEmp.id;
+      const res = await fetch(`${API_BASE_URL}/admin/employees/${empId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        setEmployees(prev => prev.map(emp => {
+          if ((emp.employeeId || emp.id) === empId) {
+            return saved;
+          }
+          return emp;
+        }));
+        setSelectedEmp(saved);
+        alert('Employee profile updated successfully.');
+      } else {
+        const errData = await res.json().catch(() => null);
+        alert(errData?.message || 'Failed to update employee profile.');
       }
-      return emp;
-    }));
-    setSelectedEmp(updatedEmp);
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   };
 
   // If detailed profile is opened, render EmployeeDetails sub-view
@@ -479,29 +540,16 @@ export default function EmployeeList({ employees, setEmployees, darkMode, colors
             </div>
             
             <form onSubmit={handleAddEmployeeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    style={styles.searchInput}
-                    placeholder="John"
-                    value={newEmployee.firstName}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, firstName: e.target.value })}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    style={styles.searchInput}
-                    placeholder="Doe"
-                    value={newEmployee.lastName}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, lastName: e.target.value })}
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Employee ID *</label>
+                <input
+                  type="text"
+                  required
+                  style={styles.searchInput}
+                  placeholder="e.g. EMP-1002"
+                  value={newEmployee.employeeId}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
+                />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -517,62 +565,15 @@ export default function EmployeeList({ employees, setEmployees, darkMode, colors
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Phone Number</label>
-                <input
-                  type="text"
-                  style={styles.searchInput}
-                  placeholder="+91 98765 43210"
-                  value={newEmployee.phone}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Department</label>
-                  <select
-                    style={styles.select}
-                    value={newEmployee.departmentName}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, departmentName: e.target.value })}
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Operations">Operations</option>
-                    <option value="HR & Talent">HR & Talent</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Designation Title</label>
-                  <input
-                    type="text"
-                    style={styles.searchInput}
-                    value={newEmployee.designationTitle}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, designationTitle: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Privilege Role</label>
-                  <select
-                    style={styles.select}
-                    value={newEmployee.role}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="HR">HR / Admin</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Joining Date</label>
-                  <input
-                    type="date"
-                    style={styles.searchInput}
-                    value={newEmployee.joiningDate}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, joiningDate: e.target.value })}
-                  />
-                </div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: colors.textMuted }}>Privilege Role *</label>
+                <select
+                  style={styles.select}
+                  value={newEmployee.role}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                >
+                  <option value="Employee">Employee (Standard View)</option>
+                  <option value="HR">HR / Administrator (Full Access)</option>
+                </select>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>

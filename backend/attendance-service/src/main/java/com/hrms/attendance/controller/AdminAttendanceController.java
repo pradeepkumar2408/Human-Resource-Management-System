@@ -6,12 +6,12 @@ import com.hrms.attendance.dto.AttendanceReportDto;
 import com.hrms.attendance.service.AttendanceService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/attendance")
@@ -26,15 +26,13 @@ public class AdminAttendanceController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<AttendanceDto>> getDailyAttendance(
+    public ResponseEntity<List<AttendanceDto>> getDailyAttendance(
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(value = "departmentId", required = false) Long departmentId,
             @RequestParam(value = "status", required = false) String status,
-            @RequestParam(value = "employeeId", required = false) Long employeeId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
+            @RequestParam(value = "employeeId", required = false) String employeeId) {
         
-        Page<AttendanceDto> result = attendanceService.getDailyAttendance(date, departmentId, status, employeeId, page, size);
+        List<AttendanceDto> result = attendanceService.getDailyAttendance(date, departmentId, status, employeeId);
         return ResponseEntity.ok(result);
     }
 

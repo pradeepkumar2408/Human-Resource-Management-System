@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class AttendanceDto {
     private Long id;
-    private Long employeeId;
+    private String employeeId;
     private Long departmentId;
     private LocalDate workDate;
     private LocalDateTime checkIn;
