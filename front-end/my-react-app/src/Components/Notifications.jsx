@@ -29,29 +29,27 @@ export default function Notifications({
     buttonText: isDark ? '#000000' : '#FFFFFF'
   };
 
-  const [filter, setFilter] = useState('ALL'); // 'ALL', 'UNREAD', 'LEAVE', 'ATTENDANCE', 'ANNOUNCEMENT'
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'LEAVE', title: 'Leave Approved', message: 'Your Paid Leave request for Aug 28 - Aug 29 was Approved by HR.', time: '2 hours ago', unread: true },
-    { id: 2, type: 'PAYROLL', title: 'Salary Slip Available', message: 'July 2026 Salary Slip is now ready to view & download in Payroll.', time: '1 day ago', unread: true },
-    { id: 3, type: 'ATTENDANCE', title: 'Attendance Alert', message: 'Remember to check-in on time today before 09:30 AM.', time: '2 days ago', unread: true },
-    { id: 4, type: 'ANNOUNCEMENT', title: 'Company Announcement', message: 'Quarterly All-Hands meeting scheduled for Friday at 3:00 PM UTC.', time: '3 days ago', unread: false },
-    { id: 5, type: 'SYSTEM', title: 'System Update', message: 'Dayflow HRMS platform updated to v2.4 with improved notification grid.', time: '5 days ago', unread: false }
-  ]);
+  const [filter, setFilter] = useState('ALL');
+  const [notifications, setNotifications] = useState([]); // Loaded from DB
 
   // Fetch from backend API
   useEffect(() => {
     const fetchNotifs = async () => {
       try {
+        const storedUser = localStorage.getItem('dayflow_user');
+        const userObj = storedUser ? JSON.parse(storedUser) : null;
+        const empId = userObj?.employeeId || '';
+        if (!empId) return;
         const token = localStorage.getItem('dayflow_token');
-        const res = await fetch(`${apiBaseUrl}/api/notifications/me`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await fetch(`${apiBaseUrl}/api/notifications/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) setNotifications(data);
+          if (Array.isArray(data)) setNotifications(data);
         }
       } catch (err) {
-        // Fallback
+        // Connection error
       }
     };
     fetchNotifs();

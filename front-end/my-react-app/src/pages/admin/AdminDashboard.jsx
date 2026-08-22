@@ -751,6 +751,8 @@ export default function AdminDashboard() {
             onMouseLeave={() => setHoveredBtn(false)}
             onClick={() => {
               alert('Signing out from Admin Portal...');
+              localStorage.removeItem('dayflow_token');
+              localStorage.removeItem('dayflow_user');
               window.location.reload();
             }}
           >
@@ -815,6 +817,8 @@ export default function AdminDashboard() {
             }}
             onClick={() => {
               alert('Signing out...');
+              localStorage.removeItem('dayflow_token');
+              localStorage.removeItem('dayflow_user');
               window.location.reload();
             }}
           >

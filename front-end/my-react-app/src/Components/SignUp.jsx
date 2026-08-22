@@ -29,6 +29,19 @@ export default function SignUp({
   const [errorMessage, setErrorMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const empid = params.get('empid') || params.get('employeeId');
+    const email = params.get('email');
+    if (empid || email) {
+      setFormData(prev => ({
+        ...prev,
+        employeeId: empid || prev.employeeId,
+        email: email || prev.email
+      }));
+    }
+  }, []);
+
   // Hover and focus states for inline CSS
   const [focusedInput, setFocusedInput] = useState(null);
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);

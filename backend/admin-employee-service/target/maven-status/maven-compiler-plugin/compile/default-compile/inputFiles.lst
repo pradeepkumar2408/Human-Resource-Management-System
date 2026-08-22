@@ -1,6 +1,7 @@
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\AdminEmployeeApplication.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\controller\AdminEmployeeController.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\controller\AuthController.java
+C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\controller\EmployeeController.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeOnboardRequest.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeResponse.java
 C:\odoo project\Human-Resource-Management-System\backend\admin-employee-service\src\main\java\com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest.java

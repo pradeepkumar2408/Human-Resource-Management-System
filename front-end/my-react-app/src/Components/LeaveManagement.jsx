@@ -44,27 +44,32 @@ export default function LeaveManagement({
 
   const [filterType, setFilterType] = useState('ALL');
 
-  // Leave Requests History State
-  const [requests, setRequests] = useState([
-    { id: 101, type: 'Paid', startDate: '2026-08-28', endDate: '2026-08-29', days: 2, remarks: 'Family function', status: 'Approved', appliedAt: '2026-08-20' },
-    { id: 102, type: 'Sick', startDate: '2026-08-18', endDate: '2026-08-18', days: 1, remarks: 'Fever and rest', status: 'Approved', appliedAt: '2026-08-17' },
-    { id: 103, type: 'Unpaid', startDate: '2026-09-05', endDate: '2026-09-08', days: 4, remarks: 'Personal travel', status: 'Pending', appliedAt: '2026-08-21' }
-  ]);
+  // Leave Requests History State (loaded from DB)
+  const [requests, setRequests] = useState([]);
+
+  // Get employee info from localStorage
+  const getEmpId = () => {
+    const storedUser = localStorage.getItem('dayflow_user');
+    const userObj = storedUser ? JSON.parse(storedUser) : null;
+    return userObj?.employeeId || '';
+  };
 
   // Fetch Leave Requests
   useEffect(() => {
     const fetchLeaves = async () => {
       try {
+        const empId = getEmpId();
+        if (!empId) return;
         const token = localStorage.getItem('dayflow_token');
-        const res = await fetch(`${apiBaseUrl}/api/leaves/me`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await fetch(`${apiBaseUrl}/api/leaves/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
         });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) setRequests(data);
         }
       } catch (err) {
-        // Fallback
+        // Connection error - show empty state
       }
     };
     fetchLeaves();
@@ -86,7 +91,7 @@ export default function LeaveManagement({
       const existingEnd = new Date(req.endDate);
       const newStart = new Date(form.startDate);
       const newEnd = new Date(form.endDate);
-      return newStart <= existingEnd && newEnd >= existingStart && req.status !== 'Rejected';
+      return newStart <= existingEnd && newEnd >= existingStart && req.status !== 'Rejected' && req.status !== 'REJECTED';
     });
 
     if (hasOverlap) {
@@ -102,38 +107,47 @@ export default function LeaveManagement({
     if (!validateLeaveForm()) return;
 
     setIsLoading(true);
+    const empId = getEmpId();
     const start = new Date(form.startDate);
     const end = new Date(form.endDate);
     const daysCount = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
     try {
       const token = localStorage.getItem('dayflow_token');
-      await fetch(`${apiBaseUrl}/api/leaves`, {
+      const res = await fetch(`${apiBaseUrl}/api/leaves`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Employee-Id': empId },
         body: JSON.stringify({
-          leaveType: form.leaveType,
+          employeeId: empId,
+          leaveTypeName: form.leaveType,   // backend uses leaveTypeName
           startDate: form.startDate,
           endDate: form.endDate,
-          remarks: form.remarks
+          reason: form.remarks             // backend uses reason
         })
-      }).catch(() => null);
+      });
 
-      const newReq = {
-        id: Date.now(),
-        type: form.leaveType,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        days: daysCount,
-        remarks: form.remarks || 'N/A',
-        status: 'Pending',
-        appliedAt: new Date().toISOString().split('T')[0]
-      };
-
-      setRequests([newReq, ...requests]);
-      setSuccessPopUp('Leave application submitted successfully!');
+      if (res.ok) {
+        const savedLeave = await res.json().catch(() => null);
+        const newReq = savedLeave || {
+          id: Date.now(),
+          leaveTypeName: form.leaveType,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          days: daysCount,
+          reason: form.remarks || 'N/A',
+          status: 'PENDING',
+          appliedAt: new Date().toISOString().split('T')[0]
+        };
+        setRequests([newReq, ...requests]);
+        setSuccessPopUp('Leave application submitted successfully!');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setSuccessPopUp(err.message || 'Failed to submit leave. Please try again.');
+      }
       setForm({ leaveType: 'Paid', startDate: '', endDate: '', remarks: '' });
       setActiveTab('history');
+    } catch (err) {
+      setSuccessPopUp('Connection error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -161,17 +175,13 @@ export default function LeaveManagement({
 
   const filteredRequests = filterType === 'ALL'
     ? requests
-    : requests.filter((r) => r.type === filterType);
+    : requests.filter((r) => (r.leaveTypeName || r.type || '').toLowerCase().includes(filterType.toLowerCase()));
 
   const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Approved':
-        return { bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7', text: isDark ? '#34D399' : '#15803D' };
-      case 'Rejected':
-        return { bg: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2', text: isDark ? '#FCA5A5' : '#B91C1C' };
-      default:
-        return { bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7', text: isDark ? '#FBBF24' : '#B45309' };
-    }
+    const s = (status || '').toUpperCase();
+    if (s === 'APPROVED') return { bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7', text: isDark ? '#34D399' : '#15803D' };
+    if (s === 'REJECTED') return { bg: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2', text: isDark ? '#FCA5A5' : '#B91C1C' };
+    return { bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7', text: isDark ? '#FBBF24' : '#B45309' }; // Pending
   };
 
   // ==========================================
@@ -559,14 +569,24 @@ export default function LeaveManagement({
                 </tr>
               </thead>
               <tbody>
-                {filteredRequests.map((item) => {
-                  const badge = getStatusBadge(item.status);
+                {filteredRequests.length === 0 ? (
+                  <tr><td colSpan={6} style={{ ...styles.td, textAlign: 'center', color: colors.textSecondary }}>
+                    No leave requests found.
+                  </td></tr>
+                ) : filteredRequests.map((item) => {
+                  const status = item.leaveStatusName || item.status || 'PENDING';
+                  const badge = getStatusBadge(status);
+                  const typeLabel = item.leaveTypeName || item.type || '–';
+                  const reasonText = item.reason || item.remarks || '–';
+                  const daysCount = item.days || (item.startDate && item.endDate
+                    ? Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / 86400000) + 1
+                    : '–');
                   return (
                     <tr key={item.id}>
-                      <td style={{ ...styles.td, fontWeight: '600' }}>{item.type}</td>
+                      <td style={{ ...styles.td, fontWeight: '600' }}>{typeLabel}</td>
                       <td style={styles.td}>{item.startDate} to {item.endDate}</td>
-                      <td style={styles.td}>{item.days} Day(s)</td>
-                      <td style={styles.td}>{item.remarks}</td>
+                      <td style={styles.td}>{daysCount} Day(s)</td>
+                      <td style={styles.td}>{reasonText}</td>
                       <td style={styles.td}>
                         <span style={{
                           padding: '4px 12px',
@@ -576,11 +596,11 @@ export default function LeaveManagement({
                           backgroundColor: badge.bg,
                           color: badge.text
                         }}>
-                          {item.status}
+                          {status}
                         </span>
                       </td>
                       <td style={styles.td}>
-                        {item.status === 'Pending' && (
+                        {(status === 'Pending' || status === 'PENDING') && (
                           <button
                             type="button"
                             onClick={() => setWithdrawConfirm(item)}

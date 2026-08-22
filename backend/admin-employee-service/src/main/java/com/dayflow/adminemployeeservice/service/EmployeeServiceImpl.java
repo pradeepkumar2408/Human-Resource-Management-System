@@ -13,6 +13,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -295,16 +296,81 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public EmployeeResponse updateSelfProfile(String id, java.util.Map<String, Object> request) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + id));
+
+        if (request.containsKey("firstName") && request.get("firstName") != null) {
+            employee.setFirstName(request.get("firstName").toString().trim());
+        }
+        if (request.containsKey("lastName") && request.get("lastName") != null) {
+            employee.setLastName(request.get("lastName").toString().trim());
+        }
+        if (request.containsKey("gender") && request.get("gender") != null) {
+            String g = request.get("gender").toString().trim();
+            if (!g.isEmpty()) {
+                employee.setGender(g.substring(0, 1).toUpperCase());
+            }
+        }
+        if (request.containsKey("phone") && request.get("phone") != null) {
+            employee.setPhone(request.get("phone").toString().trim());
+        }
+        if (request.containsKey("dob") && request.get("dob") != null) {
+            String dobStr = request.get("dob").toString().trim();
+            if (!dobStr.isEmpty()) {
+                try {
+                    employee.setDob(LocalDate.parse(dobStr));
+                } catch (Exception ignored) {}
+            }
+        }
+
+        if (request.containsKey("address") && request.get("address") != null) {
+            String addrStr = request.get("address").toString().trim();
+            if (!addrStr.isEmpty()) {
+                Address address = employee.getAddress();
+                if (address == null) {
+                    address = new Address();
+                }
+                address.setLine1(addrStr.length() > 150 ? addrStr.substring(0, 150) : addrStr);
+                if (address.getCity() == null) address.setCity("N/A");
+                if (address.getState() == null) address.setState("N/A");
+                if (address.getPinCode() == null) address.setPinCode("000000");
+                if (address.getCountry() == null) address.setCountry("India");
+                address = addressRepository.save(address);
+                employee.setAddress(address);
+            }
+        }
+
+        employee = employeeRepository.save(employee);
+        return convertToResponse(employee);
+    }
+
     private EmployeeResponse convertToResponse(Employee employee) {
         AppUser appUser = appUserRepository.findByEmployeeId(employee.getId()).orElse(null);
         return convertToResponse(employee, appUser);
     }
 
     private EmployeeResponse convertToResponse(Employee employee, AppUser appUser) {
+        String firstName = employee.getFirstName();
+        String lastName = employee.getLastName();
+        if ((firstName == null || firstName.trim().isEmpty()) && (lastName == null || lastName.trim().isEmpty())) {
+            if (appUser != null && appUser.getEmail() != null) {
+                String email = appUser.getEmail();
+                if (email.contains("@")) {
+                    firstName = email.split("@")[0];
+                } else {
+                    firstName = email;
+                }
+                lastName = "";
+            }
+        }
+
         EmployeeResponse.EmployeeResponseBuilder builder = EmployeeResponse.builder()
                 .employeeId(employee.getId())
-                .firstName(employee.getFirstName())
-                .lastName(employee.getLastName())
+                .firstName(firstName)
+                .lastName(lastName)
                 .dob(employee.getDob())
                 .gender(employee.getGender())
                 .phone(employee.getPhone())

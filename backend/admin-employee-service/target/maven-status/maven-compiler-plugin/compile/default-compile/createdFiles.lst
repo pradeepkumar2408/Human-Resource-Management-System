@@ -49,6 +49,7 @@ com\dayflow\adminemployeeservice\entity\Role$RoleBuilder.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse$AddressDto$AddressDtoBuilder.class
 com\dayflow\adminemployeeservice\entity\Document$DocumentBuilder.class
 com\dayflow\adminemployeeservice\controller\AdminEmployeeController.class
+com\dayflow\adminemployeeservice\controller\EmployeeController.class
 com\dayflow\adminemployeeservice\dto\SetPasswordRequest.class
 com\dayflow\adminemployeeservice\dto\EmployeeUpdateRequest.class
 com\dayflow\adminemployeeservice\dto\EmployeeResponse.class
