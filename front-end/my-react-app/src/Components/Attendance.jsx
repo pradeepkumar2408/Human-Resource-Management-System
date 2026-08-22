@@ -34,19 +34,14 @@ export default function Attendance({
   const [successPopUp, setSuccessPopUp] = useState('');
 
   const [summary, setSummary] = useState({
-    present: 18,
-    absent: 1,
-    halfDay: 1,
-    leave: 2
+    present: 0,
+    absent: 0,
+    halfDay: 0,
+    leave: 0
   });
 
-  const [logs, setLogs] = useState([
-    { id: 1, date: '2026-08-22', checkIn: '09:15 AM', checkOut: '--', status: 'Present', duration: 'Ongoing' },
-    { id: 2, date: '2026-08-21', checkIn: '09:02 AM', checkOut: '05:30 PM', status: 'Present', duration: '8h 28m' },
-    { id: 3, date: '2026-08-20', checkIn: '09:30 AM', checkOut: '01:30 PM', status: 'Half-day', duration: '4h 00m' },
-    { id: 4, date: '2026-08-19', checkIn: '09:00 AM', checkOut: '05:45 PM', status: 'Present', duration: '8h 45m' },
-    { id: 5, date: '2026-08-18', checkIn: '--', checkOut: '--', status: 'Leave', duration: '0h' }
-  ]);
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
 
   // Live Clock
   useEffect(() => {
@@ -54,34 +49,89 @@ export default function Attendance({
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch attendance history from backend
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const storedUser = localStorage.getItem('dayflow_user');
+        const userObj = storedUser ? JSON.parse(storedUser) : null;
+        const empId = userObj?.employeeId || '';
+        if (!empId) { setLoadingLogs(false); return; }
+        const token = localStorage.getItem('dayflow_token');
+        const res = await fetch(`${apiBaseUrl}/api/attendance/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setLogs(data);
+            setSummary({
+              present: data.filter(r => (r.statusCode || r.status || '').toUpperCase() === 'PRESENT').length,
+              absent: data.filter(r => (r.statusCode || r.status || '').toUpperCase() === 'ABSENT').length,
+              halfDay: data.filter(r => (r.statusCode || r.status || '').toUpperCase().includes('HALF')).length,
+              leave: data.filter(r => (r.statusCode || r.status || '').toUpperCase().includes('LEAVE')).length
+            });
+            // Restore today's check-in state using actual field names from AttendanceDto
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecord = data.find(r => {
+              const d = r.workDate || r.date || r.attendanceDate || '';
+              return d.toString().startsWith(today);
+            });
+            if (todayRecord) {
+              const hasCheckIn = todayRecord.checkIn;
+              const hasCheckOut = todayRecord.checkOut;
+              if (hasCheckIn && !hasCheckOut) {
+                setIsCheckedIn(true);
+                setCheckInTime(new Date(hasCheckIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+              }
+            }
+          }
+        }
+      } catch (err) { /* silent */ }
+      finally { setLoadingLogs(false); }
+    };
+    fetchAttendance();
+  }, [apiBaseUrl]);
+
   const handleCheckInToggle = async () => {
     const now = new Date();
     const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const storedUser = localStorage.getItem('dayflow_user');
+    const userObj = storedUser ? JSON.parse(storedUser) : null;
+    const empId = userObj?.employeeId || '';
     const token = localStorage.getItem('dayflow_token');
 
     try {
       if (!isCheckedIn) {
-        await fetch(`${apiBaseUrl}/api/attendance/check-in`, {
+        const res = await fetch(`${apiBaseUrl}/api/attendance/check-in`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ timestamp: now.toISOString() })
-        }).catch(() => null);
-
-        setIsCheckedIn(true);
-        setCheckInTime(formatted);
-        setSuccessPopUp(`Checked in successfully at ${formatted}!`);
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Employee-Id': empId },
+          body: JSON.stringify({ employeeId: empId })
+        });
+        if (res.ok) {
+          setIsCheckedIn(true);
+          setCheckInTime(formatted);
+          setSuccessPopUp(`Checked in successfully at ${formatted}!`);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setSuccessPopUp(err.message || 'Check-in failed. Please try again.');
+        }
       } else {
-        await fetch(`${apiBaseUrl}/api/attendance/check-out`, {
+        const res = await fetch(`${apiBaseUrl}/api/attendance/check-out`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ timestamp: now.toISOString() })
-        }).catch(() => null);
-
-        setIsCheckedIn(false);
-        setSuccessPopUp(`Checked out successfully at ${formatted}!`);
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Employee-Id': empId },
+          body: JSON.stringify({ employeeId: empId })
+        });
+        if (res.ok) {
+          setIsCheckedIn(false);
+          setSuccessPopUp(`Checked out successfully at ${formatted}!`);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setSuccessPopUp(err.message || 'Check-out failed. Please try again.');
+        }
       }
     } catch (err) {
-      // Ignore
+      setSuccessPopUp('Connection error. Please start the backend services.');
     }
   };
 
@@ -373,14 +423,32 @@ export default function Attendance({
               </tr>
             </thead>
             <tbody>
-              {logs.map((item) => {
-                const badge = getStatusBadge(item.status);
+              {logs.length === 0 ? (
+                <tr><td colSpan={5} style={{ ...styles.td, textAlign: 'center', color: colors.textSecondary }}>
+                  {loadingLogs ? 'Loading attendance records...' : 'No attendance records found.'}
+                </td></tr>
+              ) : logs.map((item) => {
+                const statusLabel = item.statusDescription || item.statusCode || item.status || '–';
+                const badge = getStatusBadge(statusLabel);
+                const dateStr = item.workDate || item.date || '–';
+                const checkInStr = item.checkIn ? new Date(item.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '–';
+                const checkOutStr = item.checkOut ? new Date(item.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '–';
+                // Duration in hours
+                let durationStr = '–';
+                if (item.checkIn && item.checkOut) {
+                  const diff = new Date(item.checkOut) - new Date(item.checkIn);
+                  const hrs = Math.floor(diff / 3600000);
+                  const mins = Math.floor((diff % 3600000) / 60000);
+                  durationStr = `${hrs}h ${mins}m`;
+                } else if (item.checkIn && !item.checkOut) {
+                  durationStr = 'Ongoing';
+                }
                 return (
                   <tr key={item.id}>
-                    <td style={{ ...styles.td, fontWeight: '600' }}>{item.date}</td>
-                    <td style={styles.td}>{item.checkIn}</td>
-                    <td style={styles.td}>{item.checkOut}</td>
-                    <td style={styles.td}>{item.duration}</td>
+                    <td style={{ ...styles.td, fontWeight: '600' }}>{dateStr}</td>
+                    <td style={styles.td}>{checkInStr}</td>
+                    <td style={styles.td}>{checkOutStr}</td>
+                    <td style={styles.td}>{durationStr}</td>
                     <td style={styles.td}>
                       <span style={{
                         padding: '4px 12px',
@@ -390,7 +458,7 @@ export default function Attendance({
                         backgroundColor: badge.bg,
                         color: badge.text
                       }}>
-                        {item.status}
+                        {statusLabel}
                       </span>
                     </td>
                   </tr>

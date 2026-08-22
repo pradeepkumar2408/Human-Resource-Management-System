@@ -31,19 +31,10 @@ export default function Payroll({
   const [successPopUp, setSuccessPopUp] = useState('');
   const [downloadConfirm, setDownloadConfirm] = useState(null);
 
-  const [salary, setSalary] = useState({
-    basic: 6500,
-    hra: 2200,
-    allowances: 1300,
-    deductions: 800,
-    netPay: 9200
-  });
+  const [salary, setSalary] = useState(null);  // null = loading
 
-  const [history, setHistory] = useState([
-    { id: 1, month: 'July 2026', payDate: '2026-07-31', basic: 6500, hra: 2200, allowances: 1300, deductions: 800, netPay: 9200, status: 'Paid' },
-    { id: 2, month: 'June 2026', payDate: '2026-06-30', basic: 6500, hra: 2200, allowances: 1300, deductions: 800, netPay: 9200, status: 'Paid' },
-    { id: 3, month: 'May 2026', payDate: '2026-05-31', basic: 6500, hra: 2200, allowances: 1300, deductions: 800, netPay: 9200, status: 'Paid' }
-  ]);
+  const [history, setHistory] = useState([]);
+  const [loadingPayroll, setLoadingPayroll] = useState(true);
 
   useEffect(() => {
     const fetchPayroll = async () => {
@@ -54,10 +45,18 @@ export default function Payroll({
         });
         if (res.ok) {
           const data = await res.json();
-          if (data) setSalary(data);
+          if (Array.isArray(data)) {
+            setHistory(data);
+            // Latest slip as current salary
+            if (data.length > 0) setSalary(data[0]);
+          } else if (data && typeof data === 'object') {
+            setSalary(data);
+          }
         }
       } catch (err) {
-        // Fallback
+        // Connection error
+      } finally {
+        setLoadingPayroll(false);
       }
     };
     fetchPayroll();

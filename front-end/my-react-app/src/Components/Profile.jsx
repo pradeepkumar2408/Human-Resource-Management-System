@@ -39,39 +39,33 @@ export default function Profile({
   // Centered Confirmation Modal State for Downloads
   const [downloadConfirm, setDownloadConfirm] = useState(null); // { name: string }
 
-  // Initial Employee Profile State
+  // Employee Profile State (loaded from DB)
   const [profileData, setProfileData] = useState({
-    employeeId: 'EMP-1001',
-    firstName: 'Jane',
-    lastName: 'Doe',
-    email: 'jane.doe@company.com',
-    dob: '1995-06-15',
-    gender: 'Female',
-    phone: '+1 (555) 234-5678',
-    address: '123 Tech Boulevard, Suite 400, San Francisco, CA',
-    department: 'Engineering',
-    designation: 'Senior Software Engineer',
-    joiningDate: '2022-03-01',
-    manager: 'Alex Morgan (EMP-1000)',
+    employeeId: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    dob: '',
+    gender: '',
+    phone: '',
+    address: '',
+    department: '',
+    designation: '',
+    joiningDate: '',
+    manager: '',
     profilePic: null,
-    salary: {
-      basic: 6500,
-      hra: 2200,
-      allowances: 1300,
-      deductions: 800,
-      netPay: 9200
-    },
-    documents: [
-      { id: 1, name: 'Offer_Letter.pdf', type: 'OFFER_LETTER', date: '2022-03-01' },
-      { id: 2, name: 'ID_Proof_Passport.pdf', type: 'ID_PROOF', date: '2022-03-01' },
-      { id: 3, name: 'Tax_Form_W2.pdf', type: 'TAX_DOCUMENT', date: '2026-01-15' }
-    ]
+    salary: null,
+    documents: []
   });
 
   const [editFields, setEditFields] = useState({
-    phone: profileData.phone,
-    address: profileData.address,
-    profilePic: profileData.profilePic
+    firstName: '',
+    lastName: '',
+    dob: '',
+    gender: '',
+    phone: '',
+    address: '',
+    profilePic: null
   });
 
   // Fetch Profile Data on mount
@@ -80,7 +74,8 @@ export default function Profile({
       try {
         const storedUser = localStorage.getItem('dayflow_user');
         const userObj = storedUser ? JSON.parse(storedUser) : null;
-        const empId = userObj?.employeeId || userObj?.id || 'EMP-1001';
+        const empId = userObj?.employeeId || userObj?.id || '';
+        if (!empId) return;
         const token = localStorage.getItem('dayflow_token');
 
         const response = await fetch(`${apiBaseUrl}/api/employees/${empId}`, {
@@ -89,15 +84,40 @@ export default function Profile({
 
         if (response.ok) {
           const data = await response.json();
-          setProfileData((prev) => ({ ...prev, ...data }));
+          const emailStr = data.email || userObj?.email || '';
+          const defaultNameFromEmail = emailStr ? emailStr.split('@')[0] : empId;
+          const mapped = {
+            employeeId: data.employeeId || empId,
+            firstName: data.firstName || defaultNameFromEmail,
+            lastName: data.lastName || '',
+            email: emailStr,
+            dob: data.dob || '',
+            gender: data.gender || '',
+            phone: data.phone || '',
+            address: data.address ? (typeof data.address === 'object'
+              ? `${data.address.line1 || ''}, ${data.address.city || ''}, ${data.address.state || ''}`.replace(/^, |, $/g, '')
+              : data.address) : '',
+            department: data.department?.name || data.departmentName || 'Engineering',
+            designation: data.designation?.title || data.designationTitle || 'Employee',
+            joiningDate: data.joiningDate || '2026-08-01',
+            manager: data.manager ? `${data.manager.name} (${data.manager.id})` : 'HR Admin',
+            profilePic: data.profilePic || null,
+            salary: data.salary || null,
+            documents: data.documents || []
+          };
+          setProfileData(mapped);
           setEditFields({
-            phone: data.phone || prev.phone,
-            address: data.address || prev.address,
-            profilePic: data.profilePic || prev.profilePic
+            firstName: mapped.firstName,
+            lastName: mapped.lastName,
+            dob: mapped.dob,
+            gender: mapped.gender,
+            phone: mapped.phone,
+            address: mapped.address,
+            profilePic: mapped.profilePic
           });
         }
       } catch (err) {
-        // Fallback
+        // Connection error
       }
     };
     fetchProfile();
@@ -123,28 +143,53 @@ export default function Profile({
       const token = localStorage.getItem('dayflow_token');
       const empId = profileData.employeeId;
 
-      await fetch(`${apiBaseUrl}/api/employees/${empId}`, {
+      const res = await fetch(`${apiBaseUrl}/api/employees/${empId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
+          firstName: editFields.firstName,
+          lastName: editFields.lastName,
+          dob: editFields.dob,
+          gender: editFields.gender,
           phone: editFields.phone,
           address: editFields.address,
           profilePic: editFields.profilePic
         })
-      }).catch(() => null);
+      });
 
-      setProfileData((prev) => ({
-        ...prev,
-        phone: editFields.phone,
-        address: editFields.address,
-        profilePic: editFields.profilePic
-      }));
+      if (res.ok) {
+        const updated = await res.json().catch(() => null);
+        setProfileData((prev) => ({
+          ...prev,
+          firstName: editFields.firstName,
+          lastName: editFields.lastName,
+          dob: editFields.dob,
+          gender: editFields.gender,
+          phone: editFields.phone,
+          address: editFields.address,
+          profilePic: editFields.profilePic
+        }));
 
-      setIsEditing(false);
-      setSuccessPopUp('Profile updated successfully!');
+        // Update dayflow_user in localStorage so other components reflect the new name
+        const storedUser = localStorage.getItem('dayflow_user');
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          userObj.firstName = editFields.firstName;
+          userObj.lastName = editFields.lastName;
+          localStorage.setItem('dayflow_user', JSON.stringify(userObj));
+        }
+
+        setIsEditing(false);
+        setSuccessPopUp('Profile updated successfully!');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setSuccessPopUp(err.message || 'Failed to update profile.');
+      }
+    } catch (err) {
+      setSuccessPopUp('Connection error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -506,54 +551,63 @@ export default function Profile({
         </div>
 
         {/* Employee Hero Card */}
-        <div style={styles.heroCard}>
-          <div style={styles.avatarContainer}>
-            {editFields.profilePic || profileData.profilePic ? (
-              <img
-                src={editFields.profilePic || profileData.profilePic}
-                alt="Profile Avatar"
-                style={styles.avatarImg}
-              />
-            ) : (
-              <div style={styles.avatarPlaceholder}>
-                {profileData.firstName.charAt(0)}
+        {(() => {
+          const defaultName = profileData.email ? profileData.email.split('@')[0] : (profileData.employeeId || 'Employee');
+          const displayName = (profileData.firstName || profileData.lastName)
+            ? `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim()
+            : defaultName;
+
+          return (
+            <div style={styles.heroCard}>
+              <div style={styles.avatarContainer}>
+                {editFields.profilePic || profileData.profilePic ? (
+                  <img
+                    src={editFields.profilePic || profileData.profilePic}
+                    alt="Profile Avatar"
+                    style={styles.avatarImg}
+                  />
+                ) : (
+                  <div style={styles.avatarPlaceholder}>
+                    {(displayName || 'E').charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                {isEditing && (
+                  <label htmlFor="avatar-upload" style={styles.uploadBadge} title="Upload new avatar">
+                    📷
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
               </div>
-            )}
 
-            {isEditing && (
-              <label htmlFor="avatar-upload" style={styles.uploadBadge} title="Upload new avatar">
-                📷
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            )}
-          </div>
-
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0' }}>
-              {profileData.firstName} {profileData.lastName}
-            </h1>
-            <p style={{ fontSize: '14px', color: colors.textSecondary, margin: '0 0 10px 0' }}>
-              {profileData.designation} • {profileData.department}
-            </p>
-            <span style={{
-              display: 'inline-block',
-              padding: '4px 12px',
-              borderRadius: '20px',
-              backgroundColor: colors.badgeBg,
-              border: `1px solid ${colors.border}`,
-              fontSize: '12px',
-              fontWeight: '600'
-            }}>
-              ID: {profileData.employeeId}
-            </span>
-          </div>
-        </div>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0' }}>
+                  {displayName}
+                </h1>
+                <p style={{ fontSize: '14px', color: colors.textSecondary, margin: '0 0 10px 0' }}>
+                  {profileData.designation} • {profileData.department}
+                </p>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  backgroundColor: colors.badgeBg,
+                  border: `1px solid ${colors.border}`,
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  ID: {profileData.employeeId}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 2-Column Grid: Personal & Job Details */}
         <div style={styles.gridTwo}>
@@ -562,13 +616,67 @@ export default function Profile({
             <h2 style={styles.cardTitle}>👤 Personal Details</h2>
 
             <div style={styles.fieldRow}>
+              <div style={styles.fieldLabel}>First Name</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  placeholder="Enter first name"
+                  value={editFields.firstName}
+                  onChange={(e) => setEditFields({ ...editFields, firstName: e.target.value })}
+                  style={styles.input}
+                />
+              ) : (
+                <div style={styles.fieldVal}>{profileData.firstName || (profileData.email ? profileData.email.split('@')[0] : '–')}</div>
+              )}
+            </div>
+
+            <div style={styles.fieldRow}>
+              <div style={styles.fieldLabel}>Last Name</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  placeholder="Enter last name"
+                  value={editFields.lastName}
+                  onChange={(e) => setEditFields({ ...editFields, lastName: e.target.value })}
+                  style={styles.input}
+                />
+              ) : (
+                <div style={styles.fieldVal}>{profileData.lastName || '–'}</div>
+              )}
+            </div>
+
+            <div style={styles.fieldRow}>
               <div style={styles.fieldLabel}>Date of Birth</div>
-              <div style={styles.fieldVal}>{profileData.dob}</div>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={editFields.dob}
+                  onChange={(e) => setEditFields({ ...editFields, dob: e.target.value })}
+                  style={styles.input}
+                />
+              ) : (
+                <div style={styles.fieldVal}>{profileData.dob || 'Not set'}</div>
+              )}
             </div>
 
             <div style={styles.fieldRow}>
               <div style={styles.fieldLabel}>Gender</div>
-              <div style={styles.fieldVal}>{profileData.gender}</div>
+              {isEditing ? (
+                <select
+                  value={editFields.gender}
+                  onChange={(e) => setEditFields({ ...editFields, gender: e.target.value })}
+                  style={styles.input}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="M">Male (M)</option>
+                  <option value="F">Female (F)</option>
+                  <option value="O">Other (O)</option>
+                </select>
+              ) : (
+                <div style={styles.fieldVal}>
+                  {profileData.gender === 'M' ? 'Male (M)' : profileData.gender === 'F' ? 'Female (F)' : profileData.gender === 'O' ? 'Other (O)' : (profileData.gender || 'Not set')}
+                </div>
+              )}
             </div>
 
             <div style={styles.fieldRow}>
@@ -576,12 +684,13 @@ export default function Profile({
               {isEditing ? (
                 <input
                   type="text"
+                  placeholder="e.g. +91 9876543210"
                   value={editFields.phone}
                   onChange={(e) => setEditFields({ ...editFields, phone: e.target.value })}
                   style={styles.input}
                 />
               ) : (
-                <div style={styles.fieldVal}>{profileData.phone}</div>
+                <div style={styles.fieldVal}>{profileData.phone || 'Not set'}</div>
               )}
             </div>
 
@@ -589,24 +698,34 @@ export default function Profile({
               <div style={styles.fieldLabel}>Residential Address</div>
               {isEditing ? (
                 <textarea
+                  placeholder="Enter full address"
                   value={editFields.address}
                   onChange={(e) => setEditFields({ ...editFields, address: e.target.value })}
                   style={{ ...styles.input, height: '70px', resize: 'vertical' }}
                 />
               ) : (
-                <div style={styles.fieldVal}>{profileData.address}</div>
+                <div style={styles.fieldVal}>{profileData.address || 'Not set'}</div>
               )}
             </div>
 
             {isEditing && (
-              <button
-                type="button"
-                onClick={handleSaveProfile}
-                disabled={isLoading}
-                style={{ ...styles.editToggleBtn, width: '100%', justifyContent: 'center', marginTop: '12px' }}
-              >
-                {isLoading ? 'Saving Changes...' : 'Save Profile Changes'}
-              </button>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={isLoading}
+                  style={{ ...styles.editToggleBtn, flex: 1, justifyContent: 'center' }}
+                >
+                  {isLoading ? 'Saving Changes...' : '💾 Save Profile Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  style={{ ...styles.backBtn, padding: '10px 16px' }}
+                >
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
 
@@ -639,26 +758,32 @@ export default function Profile({
         {/* Read-Only Salary Structure Card */}
         <div style={{ ...styles.card, marginBottom: '24px' }}>
           <h2 style={styles.cardTitle}>💵 Read-Only Salary Structure</h2>
-          <div style={styles.salaryGrid}>
-            <div style={styles.salaryBox}>
-              <div style={styles.fieldLabel}>Basic Pay</div>
-              <div style={styles.fieldVal}>${profileData.salary.basic.toLocaleString()}</div>
-            </div>
-            <div style={styles.salaryBox}>
-              <div style={styles.fieldLabel}>HRA</div>
-              <div style={styles.fieldVal}>${profileData.salary.hra.toLocaleString()}</div>
-            </div>
-            <div style={styles.salaryBox}>
-              <div style={styles.fieldLabel}>Allowances</div>
-              <div style={styles.fieldVal}>${profileData.salary.allowances.toLocaleString()}</div>
-            </div>
-            <div style={styles.salaryBox}>
-              <div style={styles.fieldLabel}>Net Pay / Mo</div>
-              <div style={{ ...styles.fieldVal, color: isDark ? '#34D399' : '#15803D' }}>
-                ${profileData.salary.netPay.toLocaleString()}
+          {profileData.salary ? (
+            <div style={styles.salaryGrid}>
+              <div style={styles.salaryBox}>
+                <div style={styles.fieldLabel}>Basic Pay</div>
+                <div style={styles.fieldVal}>${(profileData.salary.basic || 0).toLocaleString()}</div>
+              </div>
+              <div style={styles.salaryBox}>
+                <div style={styles.fieldLabel}>HRA</div>
+                <div style={styles.fieldVal}>${(profileData.salary.hra || 0).toLocaleString()}</div>
+              </div>
+              <div style={styles.salaryBox}>
+                <div style={styles.fieldLabel}>Allowances</div>
+                <div style={styles.fieldVal}>${(profileData.salary.allowances || 0).toLocaleString()}</div>
+              </div>
+              <div style={styles.salaryBox}>
+                <div style={styles.fieldLabel}>Net Pay / Mo</div>
+                <div style={{ ...styles.fieldVal, color: isDark ? '#34D399' : '#15803D' }}>
+                  ${(profileData.salary.netPay || 0).toLocaleString()}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ color: colors.textSecondary, fontSize: '14px', padding: '12px 0' }}>
+              Salary information not available. Contact HR.
+            </div>
+          )}
         </div>
 
         {/* Employee Documents List */}

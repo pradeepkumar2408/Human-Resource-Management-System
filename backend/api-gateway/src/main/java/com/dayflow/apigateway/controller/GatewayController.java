@@ -27,7 +27,7 @@ public class GatewayController {
 
         // Determine target base URL based on sub-service routes
         String targetBaseUrl;
-        if (path.startsWith("/api/admin/employees") || path.startsWith("/api/auth")) {
+        if (path.startsWith("/api/admin/employees") || path.startsWith("/api/auth") || path.startsWith("/api/employees")) {
             targetBaseUrl = "http://localhost:8101";
         } else if (path.startsWith("/api/admin/attendance") || path.startsWith("/api/attendance")) {
             targetBaseUrl = "http://localhost:8112";

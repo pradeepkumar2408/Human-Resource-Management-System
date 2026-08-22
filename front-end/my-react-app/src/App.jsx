@@ -9,11 +9,32 @@ import Attendance from './Components/Attendance';
 import LeaveManagement from './Components/LeaveManagement';
 import Payroll from './Components/Payroll';
 import Notifications from './Components/Notifications';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [userData, setUserData] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (window.location.pathname === '/signup' || window.location.href.includes('/signup')) {
+      localStorage.removeItem('dayflow_token');
+      localStorage.removeItem('dayflow_user');
+      return 'signup';
+    }
+
+    const savedUser = localStorage.getItem('dayflow_user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        const role = (parsed.role || '').toUpperCase();
+        if (role === 'ADMIN' || role === 'HR') return 'admin-dashboard';
+        return 'dashboard';
+      } catch (e) {
+        return 'login';
+      }
+    }
+    return 'login';
+  });
 
   // Persistent Theme State across all pages
   const [theme, setTheme] = useState(() => {
@@ -28,12 +49,21 @@ function App() {
 
   const handleLoginSuccess = (data) => {
     setUserData(data);
-    setCurrentPage('dashboard');
+    const role = (data.user?.role || '').toUpperCase();
+    if (role === 'ADMIN' || role === 'HR') {
+      setCurrentPage('admin-dashboard');
+    } else if (role === 'EMPLOYEE') {
+      setCurrentPage('dashboard');
+    } else {
+      alert(`Invalid user privileges: '${role}' is not a recognized role.`);
+      handleLogout();
+    }
   };
 
   const handleSignUpSuccess = (data, email) => {
     setRegisteredEmail(email);
-    setCurrentPage('verify-email');
+    alert('Account activated successfully! You can now log in with your password.');
+    setCurrentPage('login');
   };
 
   const handleLogout = () => {
@@ -119,6 +149,12 @@ function App() {
         <Notifications
           theme={theme}
           onBackToDashboard={() => setCurrentPage('dashboard')}
+        />
+      )}
+
+      {currentPage === 'admin-dashboard' && (
+        <AdminDashboard 
+          onLogout={handleLogout}
         />
       )}
     </>

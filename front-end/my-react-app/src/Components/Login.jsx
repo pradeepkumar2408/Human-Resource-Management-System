@@ -68,16 +68,8 @@ export default function Login({
         setError(data.message || 'Invalid email or password');
       }
     } catch (err) {
-      // 2. Fallback for Local Frontend Demo/Testing when backend service is offline
-      console.warn('Backend service offline - Logging in with local demo profile');
-      const demoUser = {
-        email: email || 'employee@company.com',
-        employeeId: 'EMP-1001',
-        role: 'EMPLOYEE'
-      };
-      localStorage.setItem('dayflow_token', 'demo-token-12345');
-      localStorage.setItem('dayflow_user', JSON.stringify(demoUser));
-      if (onLoginSuccess) onLoginSuccess({ token: 'demo-token-12345', user: demoUser });
+      console.error('Connection error:', err);
+      setError('Connection error: The gateway is currently unreachable. Start the backend services.');
     } finally {
       setIsLoading(false);
     }

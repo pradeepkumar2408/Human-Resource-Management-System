@@ -36,7 +36,7 @@ export default function EmployeeDashboard({
   // User details from localStorage
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('dayflow_user');
-    return stored ? JSON.parse(stored) : { email: '717824p120@company.com', employeeId: 'EMP-1001', role: 'EMPLOYEE' };
+    return stored ? JSON.parse(stored) : { email: '', employeeId: '', role: 'EMPLOYEE' };
   });
 
   // Live Clock State
@@ -52,19 +52,15 @@ export default function EmployeeDashboard({
   // Centered Success Pop-Up State
   const [successPopUp, setSuccessPopUp] = useState('');
 
-  // Leave Balances State
-  const [leaveBalances] = useState({
-    paid: { remaining: 9, total: 12 },
-    sick: { remaining: 8, total: 10 },
-    unpaid: { remaining: 5, total: 5 }
+  // Leave Balances State (fetched from DB)
+  const [leaveBalances, setLeaveBalances] = useState({
+    paid: { remaining: 0, total: 0 },
+    sick: { remaining: 0, total: 0 },
+    unpaid: { remaining: 0, total: 0 }
   });
 
-  // Notifications State
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'LEAVE', message: 'Your Paid Leave request for Aug 28 was Approved by HR.', time: '2 hours ago', unread: true },
-    { id: 2, type: 'PAYROLL', message: 'July Salary Slip is now available for download.', time: '1 day ago', unread: true },
-    { id: 3, type: 'ATTENDANCE', message: 'Remember to check-in on time today before 09:30 AM.', time: '2 days ago', unread: true }
-  ]);
+  // Notifications State (fetched from DB)
+  const [notifications, setNotifications] = useState([]);
 
   // Hover states for interactive UI
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -76,12 +72,120 @@ export default function EmployeeDashboard({
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch user profile from backend on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const empId = user?.employeeId || '';
+        if (!empId) return;
+        const token = localStorage.getItem('dayflow_token');
+        const res = await fetch(`${apiBaseUrl}/api/employees/${empId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            setUser((prev) => ({
+              ...prev,
+              firstName: data.firstName || prev.firstName,
+              lastName: data.lastName || prev.lastName,
+              email: data.email || prev.email
+            }));
+          }
+        }
+      } catch (err) { /* silent */ }
+    };
+    fetchUserProfile();
+  }, [apiBaseUrl]);
+
+  // Fetch notifications from backend
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const empId = user?.employeeId || '';
+        if (!empId) return;
+        const token = localStorage.getItem('dayflow_token');
+        const res = await fetch(`${apiBaseUrl}/api/notifications/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setNotifications(data);
+        }
+      } catch (err) { /* silent */ }
+    };
+    fetchNotifications();
+  }, [apiBaseUrl, user]);
+
+  // Fetch leave balances from backend
+  useEffect(() => {
+    const fetchLeaveBalances = async () => {
+      try {
+        const empId = user?.employeeId || '';
+        if (!empId) return;
+        const token = localStorage.getItem('dayflow_token');
+        const res = await fetch(`${apiBaseUrl}/api/leaves/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            const paid = data.filter(l => (l.leaveTypeName || l.type || l.leaveType || '').toLowerCase().includes('paid'));
+            const sick = data.filter(l => (l.leaveTypeName || l.type || l.leaveType || '').toLowerCase().includes('sick'));
+            setLeaveBalances({
+              paid: { remaining: Math.max(0, 12 - paid.filter(l => l.status !== 'REJECTED' && l.status !== 'Rejected').length), total: 12 },
+              sick: { remaining: Math.max(0, 10 - sick.filter(l => l.status !== 'REJECTED' && l.status !== 'Rejected').length), total: 10 },
+              unpaid: { remaining: 5, total: 5 }
+            });
+          }
+        }
+      } catch (err) { /* silent */ }
+    };
+    fetchLeaveBalances();
+  }, [apiBaseUrl, user]);
+
+  // Check today's attendance status from DB to restore check-in state on page load
+  useEffect(() => {
+    const fetchTodayAttendance = async () => {
+      try {
+        const empId = user?.employeeId || '';
+        if (!empId) return;
+        const token = localStorage.getItem('dayflow_token');
+        const res = await fetch(`${apiBaseUrl}/api/attendance/me?employeeId=${empId}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Employee-Id': empId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const today = new Date().toISOString().split('T')[0];
+          const todayRecord = Array.isArray(data) ? data.find(r => {
+            const d = r.workDate || r.date || r.attendanceDate || '';
+            return d.toString().startsWith(today);
+          }) : null;
+          if (todayRecord) {
+            const hasCheckIn = todayRecord.checkIn;
+            const hasCheckOut = todayRecord.checkOut;
+            if (hasCheckIn && !hasCheckOut) {
+              setIsCheckedIn(true);
+              const timeStr = new Date(hasCheckIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              setCheckInTime(timeStr);
+            } else if (hasCheckIn && hasCheckOut) {
+              setIsCheckedIn(false); // Already checked out today
+            }
+          }
+        }
+      } catch (err) { /* silent */ }
+    };
+    fetchTodayAttendance();
+  }, [apiBaseUrl, user]);
+
   // Immediate Click Handler for Attendance Check-In / Check-Out
-  const handleAttendanceToggle = () => {
+  const handleAttendanceToggle = async () => {
     const now = new Date();
     const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const empId = user?.employeeId || '';
+    const token = localStorage.getItem('dayflow_token');
 
-    // 1. INSTANT UI Response (Optimistic)
+    // Optimistic UI update
     if (!isCheckedIn) {
       setIsCheckedIn(true);
       setCheckInTime(formattedTime);
@@ -91,14 +195,15 @@ export default function EmployeeDashboard({
       setSuccessPopUp(`Checked out successfully at ${formattedTime}!`);
     }
 
-    // 2. Background API Call (Non-blocking)
-    const token = localStorage.getItem('dayflow_token');
+    // API Call with employeeId in body
     const endpoint = !isCheckedIn ? '/api/attendance/check-in' : '/api/attendance/check-out';
-    fetch(`${apiBaseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ timestamp: now.toISOString() })
-    }).catch(() => null);
+    try {
+      await fetch(`${apiBaseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Employee-Id': empId },
+        body: JSON.stringify({ employeeId: empId })
+      });
+    } catch (err) { /* silent */ }
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -624,7 +729,7 @@ export default function EmployeeDashboard({
           {/* User Profile Chip */}
           <div style={styles.userChip}>
             <div style={styles.avatar}>
-              {user.email ? user.email.charAt(0).toUpperCase() : 'E'}
+              {(user.firstName || user.email || 'E').charAt(0).toUpperCase()}
             </div>
             <span style={{ fontSize: '13px', fontWeight: '600' }}>
               {user.employeeId || 'EMP-1001'}
@@ -653,7 +758,7 @@ export default function EmployeeDashboard({
         {/* Welcome Section */}
         <div style={styles.welcomeBanner}>
           <h1 style={styles.welcomeTitle}>
-            Welcome back, {user.email ? user.email.split('@')[0] : 'Employee'} 👋
+            Welcome back, {user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : (user.email ? user.email.split('@')[0] : 'Employee')} 👋
           </h1>
           <p style={styles.welcomeSub}>
             Here is your daily workspace snapshot for {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}

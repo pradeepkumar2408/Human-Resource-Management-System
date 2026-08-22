@@ -13,4 +13,5 @@ public interface EmployeeService {
     void setPassword(SetPasswordRequest request);
     void signup(SignUpRequest request);
     LoginResponse login(LoginRequest request);
+    EmployeeResponse updateSelfProfile(String id, java.util.Map<String, Object> request);
 }
