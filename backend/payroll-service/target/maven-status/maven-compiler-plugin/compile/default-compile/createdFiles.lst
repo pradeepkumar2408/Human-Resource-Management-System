@@ -1,9 +1,0 @@
-com\dayflow\payroll\controller\PayrollController.class
-com\dayflow\payroll\service\PayrollService.class
-com\dayflow\payroll\entity\SalaryStructure.class
-com\dayflow\payroll\PayrollServiceApplication.class
-com\dayflow\payroll\repository\PayrollRepository.class
-com\dayflow\payroll\entity\Payroll$PayrollBuilder.class
-com\dayflow\payroll\repository\SalaryStructureRepository.class
-com\dayflow\payroll\entity\Payroll.class
-com\dayflow\payroll\entity\SalaryStructure$SalaryStructureBuilder.class
