@@ -13,6 +13,7 @@ com\dayflow\auth\AuthServiceApplication.class
 com\dayflow\auth\controller\AuthController.class
 com\dayflow\auth\dto\ForgotPasswordRequest.class
 com\dayflow\auth\dto\LoginRequest.class
+com\dayflow\auth\config\DataInitializer.class
 com\dayflow\auth\dto\ApiResponse.class
 com\dayflow\auth\dto\LoginResponse$LoginResponseBuilder.class
 com\dayflow\auth\dto\VerifyResetOtpRequest.class
@@ -21,6 +22,7 @@ com\dayflow\auth\dto\ErrorResponse.class
 com\dayflow\auth\dto\ResetPasswordRequest.class
 com\dayflow\auth\dto\LoginResponse.class
 com\dayflow\auth\util\JwtUtils.class
+com\dayflow\auth\controller\NotificationController.class
 com\dayflow\auth\entity\Role$RoleBuilder.class
 com\dayflow\auth\service\AuthService.class
 com\dayflow\auth\dto\ResendVerificationRequest.class
