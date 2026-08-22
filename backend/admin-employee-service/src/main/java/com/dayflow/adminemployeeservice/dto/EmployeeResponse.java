@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Builder
 public class EmployeeResponse {
 
-    private Long employeeId;
+    private String employeeId;
     private String firstName;
     private String lastName;
     private String email;
@@ -68,7 +68,7 @@ public class EmployeeResponse {
     @AllArgsConstructor
     @Builder
     public static class ManagerDto {
-        private Long id;
+        private String id;
         private String name;
     }
 
