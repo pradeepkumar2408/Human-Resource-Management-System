@@ -1,0 +1,13 @@
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\AttendanceServiceApplication.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\controller\AdminAttendanceController.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\controller\EmployeeAttendanceController.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\dto\AttendanceCorrectionRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\dto\AttendanceDto.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\dto\AttendanceReportDto.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\dto\CheckInRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\dto\CheckOutRequest.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\model\Attendance.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\model\AttendanceStatus.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\repository\AttendanceRepository.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\repository\AttendanceStatusRepository.java
+C:\odoo project\Human-Resource-Management-System\backend\attendance-service\src\main\java\com\hrms\attendance\service\AttendanceService.java

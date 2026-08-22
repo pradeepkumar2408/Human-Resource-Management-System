@@ -14,15 +14,13 @@ import java.time.LocalDate;
 public class Employee {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "emp_seq_gen")
-    @SequenceGenerator(name = "emp_seq_gen", sequenceName = "EMPLOYEE_SEQ", allocationSize = 1)
-    @Column(name = "EMPLOYEE_ID")
-    private Long id;
+    @Column(name = "EMPLOYEE_ID", length = 50)
+    private String id;
 
-    @Column(name = "FIRST_NAME", nullable = false, length = 60)
+    @Column(name = "FIRST_NAME", length = 60)
     private String firstName;
 
-    @Column(name = "LAST_NAME", nullable = false, length = 60)
+    @Column(name = "LAST_NAME", length = 60)
     private String lastName;
 
     @Column(name = "DOB")
@@ -50,7 +48,7 @@ public class Employee {
     @JoinColumn(name = "MANAGER_ID")
     private Employee manager;
 
-    @Column(name = "JOINING_DATE", nullable = false)
+    @Column(name = "JOINING_DATE")
     private LocalDate joiningDate;
 
     @OneToOne(fetch = FetchType.LAZY)
