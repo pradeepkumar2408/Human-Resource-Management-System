@@ -589,6 +589,19 @@ export default function AdminDashboard() {
 
   return (
     <div style={styles.appWrapper}>
+      {/* Self-contained CSS overrides to ensure full screen coverage without external CSS files */}
+      <style>{`
+        html, body, #root {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: 100vh !important;
+          background-color: #F8F9FA !important;
+          text-align: left !important;
+          border-inline: none !important;
+        }
+      `}</style>
       
       {/* 1. PERSISTENT SIDEBAR Drawer (Responsive/Collapsible) */}
       <div style={styles.sidebar}>
@@ -633,12 +646,59 @@ export default function AdminDashboard() {
         </ul>
 
         {/* Sidebar Footer (Active Admin Context) */}
-        <div style={styles.sidebarFooter}>
-          <div style={styles.adminAvatar}>HR</div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <h4 style={styles.adminName}>Admin Portal</h4>
-            <p style={styles.adminRole}>admin@dayflow.com</p>
+        <div style={{
+          ...styles.sidebarFooter,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          gap: '12px',
+          padding: '16px'
+        }}>
+          {/* Admin User Info row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={styles.adminAvatar}>HR</div>
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+              <h4 style={styles.adminName}>Admin Portal</h4>
+              <p style={styles.adminRole}>admin@dayflow.com</p>
+            </div>
           </div>
+
+          {/* Sign Out Button */}
+          <button 
+            onClick={() => {
+              alert('Signing out from Admin Portal...');
+              window.location.reload();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              width: '100%',
+              backgroundColor: '#1F2A37',
+              color: '#F9FAFB',
+              border: '1px solid #374151',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#B42318';
+              e.currentTarget.style.borderColor = '#B42318';
+              e.currentTarget.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#1F2A37';
+              e.currentTarget.style.borderColor = '#374151';
+              e.currentTarget.style.color = '#F9FAFB';
+            }}
+          >
+            <i className="bi bi-box-arrow-right"></i>
+            <span>Sign Out</span>
+          </button>
         </div>
       </div>
 
@@ -675,27 +735,6 @@ export default function AdminDashboard() {
           </div>
 
           <div style={styles.topBarRight}>
-            {/* Quick Context Switcher Select */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {!isMobile && (
-                <span style={{ fontSize: '12px', color: '#667085', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Viewer Switcher:
-                </span>
-              )}
-              <select
-                style={styles.switcherSelect}
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-              >
-                <option value="">-- Switch to employee view --</option>
-                {employees.map(emp => (
-                  <option key={emp.employeeId || emp.id} value={emp.employeeId || emp.id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeId || emp.id})
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Notifications Alert Bell */}
             <button 
               style={{
@@ -710,7 +749,8 @@ export default function AdminDashboard() {
                 cursor: 'pointer',
                 fontSize: '16px',
                 color: '#344054',
-                position: 'relative'
+                position: 'relative',
+                marginRight: '8px'
               }}
             >
               <i className="bi bi-bell"></i>
@@ -726,6 +766,27 @@ export default function AdminDashboard() {
                 }}></span>
               )}
             </button>
+
+            {/* Profile Logo */}
+            <div 
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: '#0C111D',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '14px',
+                cursor: 'pointer',
+                border: '2px solid #E4E7EC'
+              }}
+              title="Admin Profile"
+            >
+              AD
+            </div>
           </div>
         </div>
 
