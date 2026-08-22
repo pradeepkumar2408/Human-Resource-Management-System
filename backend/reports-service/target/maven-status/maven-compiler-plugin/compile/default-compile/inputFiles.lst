@@ -1,0 +1,14 @@
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\config\AppConfig.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\controller\ReportsController.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\AnalyticsResponse.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\AttendanceRecord.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\EmployeeDto.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\EmployeePageResponse.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\LeaveRecord.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\LeaveStatsResponse.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\LeaveStatus.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\LeaveType.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\dto\SalarySlipRecord.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\ReportsServiceApplication.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\service\ReportsService.java
+C:\odoo project\Human-Resource-Management-System\backend\reports-service\src\main\java\com\hrms\reports\service\ReportsServiceImpl.java
