@@ -14,6 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/employees")
+@CrossOrigin(origins = "*")
 public class AdminEmployeeController {
 
     private final EmployeeService employeeService;
@@ -31,14 +32,14 @@ public class AdminEmployeeController {
 
     @PutMapping("/{id}")
     public ResponseEntity<EmployeeResponse> updateEmployee(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody EmployeeUpdateRequest request) {
         EmployeeResponse response = employeeService.updateEmployee(id, request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeResponse> getEmployeeById(@PathVariable Long id) {
+    public ResponseEntity<EmployeeResponse> getEmployeeById(@PathVariable String id) {
         EmployeeResponse response = employeeService.getEmployeeById(id);
         return ResponseEntity.ok(response);
     }
@@ -65,7 +66,7 @@ public class AdminEmployeeController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<Map<String, String>> updateEmployeeStatus(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam boolean active) {
         employeeService.updateEmployeeStatus(id, active);
         String message = active ? "Employee account activated successfully" : "Employee account deactivated successfully";

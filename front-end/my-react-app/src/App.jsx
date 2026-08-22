@@ -1,12 +1,13 @@
+
 import { useState } from 'react';
 import Login from './Components/Login';
 import SignUp from './Components/SignUp';
 import ForgotPassword from './Components/ForgotPassword';
 import VerifyEmail from './Components/VerifyEmail';
-import EmployeeDashboard from './Components/EmployeeDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('login');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [userData, setUserData] = useState(null);
 
@@ -22,15 +23,9 @@ function App() {
     setCurrentPage('verify-email');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('dayflow_token');
-    localStorage.removeItem('dayflow_user');
-    setUserData(null);
-    setCurrentPage('login');
-  };
-
   return (
     <>
+<<<<<<< HEAD
       {currentPage === 'login' && (
         <Login
           apiBaseUrl={API_BASE_URL}
@@ -71,6 +66,10 @@ function App() {
         />
       )}
     </>
+=======
+      <AdminDashboard/>
+    </> 
+>>>>>>> e0ab246a04d250a619ac0f570ceca22621ceae32
   );
 }
 

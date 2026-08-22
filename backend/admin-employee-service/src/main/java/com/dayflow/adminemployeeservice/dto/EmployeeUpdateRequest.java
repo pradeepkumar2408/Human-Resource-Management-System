@@ -54,7 +54,7 @@ public class EmployeeUpdateRequest {
 
     private Long designationId;
 
-    private Long managerId;
+    private String managerId;
 
     @NotNull(message = "Joining date is required")
     private LocalDate joiningDate;

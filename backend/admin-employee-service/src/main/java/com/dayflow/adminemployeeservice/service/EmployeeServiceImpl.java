@@ -6,6 +6,7 @@ import com.dayflow.adminemployeeservice.exception.*;
 import com.dayflow.adminemployeeservice.repository.*;
 import com.dayflow.adminemployeeservice.util.PasswordUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.SimpleMailMessage;
@@ -25,6 +26,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final DesignationRepository designationRepository;
     private final RoleRepository roleRepository;
     private final JavaMailSender mailSender;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @Autowired
     public EmployeeServiceImpl(
@@ -52,55 +56,22 @@ public class EmployeeServiceImpl implements EmployeeService {
             throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already in use");
         }
 
-        // 2. Fetch Department, Designation, Role, and Manager if specified
-        Department department = null;
-        if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + request.getDepartmentId()));
+        // 2. Check if employee ID already exists
+        if (employeeRepository.findById(request.getEmployeeId()).isPresent()) {
+            throw new IllegalArgumentException("Employee ID '" + request.getEmployeeId() + "' is already in use");
         }
 
-        Designation designation = null;
-        if (request.getDesignationId() != null) {
-            designation = designationRepository.findById(request.getDesignationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Designation not found with ID: " + request.getDesignationId()));
-        }
+        // 3. Fetch Role by role name (e.g. "EMPLOYEE" or "ADMIN")
+        Role role = roleRepository.findByRoleName(request.getRole().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + request.getRole()));
 
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found with ID: " + request.getRoleId()));
-
-        Employee manager = null;
-        if (request.getManagerId() != null) {
-            manager = employeeRepository.findById(request.getManagerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Manager not found with ID: " + request.getManagerId()));
-        }
-
-        // 3. Create and Save Address
-        Address address = Address.builder()
-                .line1(request.getLine1())
-                .line2(request.getLine2())
-                .city(request.getCity())
-                .state(request.getState())
-                .pinCode(request.getPinCode())
-                .country(request.getCountry())
-                .build();
-        address = addressRepository.save(address);
-
-        // 4. Create and Save Employee
+        // 4. Save Employee skeleton (ID explicitly provided by Admin, names/joining nullable)
         Employee employee = Employee.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .dob(request.getDob())
-                .gender(request.getGender())
-                .phone(request.getPhone())
-                .address(address)
-                .department(department)
-                .designation(designation)
-                .manager(manager)
-                .joiningDate(request.getJoiningDate())
+                .id(request.getEmployeeId())
                 .build();
         employee = employeeRepository.save(employee);
 
-        // 5. Create and Save AppUser
+        // 5. Create AppUser with random token and inactive status
         String token = UUID.randomUUID().toString();
         LocalDateTime expiry = LocalDateTime.now().plusHours(24);
 
@@ -116,23 +87,30 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .build();
         appUser = appUserRepository.save(appUser);
 
-        // 6. Send Invitation Email
+        // 6. Send Invitation Email pointing to the React signup page
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom("alonewarrior123456@gmail.com");
             mailMessage.setTo(appUser.getEmail());
             mailMessage.setSubject("Invitation to Join Dayflow HRMS");
-            mailMessage.setText("Hello " + employee.getFirstName() + ",\n\n"
+            
+            // Build direct link: http://localhost:5173/signup?empid=123&email=abc@example.com&token=XYZ
+            String activationLink = frontendUrl 
+                    + "?empid=" + employee.getId() 
+                    + "&email=" + appUser.getEmail() 
+                    + "&token=" + token;
+
+            mailMessage.setText("Hello,\n\n"
                     + "You have been onboarded to Dayflow HRMS by Admin Karthi.\n"
                     + "Please click the following link to set your password and activate your account:\n\n"
-                    + "http://localhost:8086/api/admin/employees/set-password?token=" + token + "\n\n"
+                    + activationLink + "\n\n"
                     + "This invitation link will expire in 24 hours.\n\n"
                     + "Best regards,\nDayflow Admin Team");
             mailSender.send(mailMessage);
             System.out.println("Email sent successfully to: " + appUser.getEmail());
         } catch (Exception e) {
             System.err.println("Failed to send invite email to " + appUser.getEmail() + ": " + e.getMessage());
-            // Print the token to console so testing is still possible in case of local network/SMTP blocking
+            // Print the token and parameters to console so testing is still possible in case of local network/SMTP blocking
             System.out.println("====== [TEST BYPASS] GENERATED INVITE TOKEN FOR " + appUser.getEmail() + ": " + token + " ======");
         }
 
@@ -141,7 +119,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public EmployeeResponse updateEmployee(Long id, EmployeeUpdateRequest request) {
+    public EmployeeResponse updateEmployee(String id, EmployeeUpdateRequest request) {
         // 1. Fetch Employee
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + id));
@@ -208,7 +186,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
-    public EmployeeResponse getEmployeeById(Long id) {
+    public EmployeeResponse getEmployeeById(String id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + id));
         return convertToResponse(employee);
@@ -223,10 +201,63 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public void updateEmployeeStatus(Long id, boolean active) {
+    public void updateEmployeeStatus(String id, boolean active) {
         AppUser appUser = appUserRepository.findByEmployeeId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AppUser credentials not found for Employee ID: " + id));
         appUser.setActive(active);
+        appUserRepository.save(appUser);
+    }
+
+    @Override
+    @Transactional
+    public void setPassword(SetPasswordRequest request) {
+        AppUser appUser = appUserRepository.findByInviteToken(request.getToken())
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired invite token"));
+
+        if (appUser.getTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invite token has expired");
+        }
+
+        appUser.setPasswordHash(PasswordUtils.hashPassword(request.getPassword()));
+        appUser.setInviteToken(null);
+        appUser.setTokenExpiry(null);
+        appUser.setEmailVerified(true);
+        appUser.setActive(true);
+        appUserRepository.save(appUser);
+    }
+
+    @Override
+    @Transactional
+    public void signup(SignUpRequest request) {
+        // Find employee
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee details not found or not pre-registered by Admin/HR."));
+
+        // Find associated user credentials
+        AppUser appUser = appUserRepository.findByEmployeeId(employee.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pre-registered account credentials not found."));
+
+        // Verify email matching (case-insensitive)
+        if (!appUser.getEmail().equalsIgnoreCase(request.getEmail().trim())) {
+            throw new IllegalArgumentException("Entered email address does not match our pre-registered records.");
+        }
+
+        // Verify role matching (case-insensitive)
+        if (!appUser.getRole().getRoleName().equalsIgnoreCase(request.getRole().trim())) {
+            throw new IllegalArgumentException("Entered role assignment does not match our pre-registered records.");
+        }
+
+        // Check if already active
+        if (appUser.isActive() && appUser.isEmailVerified()) {
+            throw new IllegalArgumentException("Account is already active. Please sign in.");
+        }
+
+        // Save password and activate account
+        appUser.setPasswordHash(PasswordUtils.hashPassword(request.getPassword()));
+        appUser.setInviteToken(null);
+        appUser.setTokenExpiry(null);
+        appUser.setEmailVerified(true);
+        appUser.setActive(true);
         appUserRepository.save(appUser);
     }
 
@@ -292,23 +323,5 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         return builder.build();
-    }
-
-    @Override
-    @Transactional
-    public void setPassword(SetPasswordRequest request) {
-        AppUser appUser = appUserRepository.findByInviteToken(request.getToken())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired invite token"));
-
-        if (appUser.getTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Invite token has expired");
-        }
-
-        appUser.setPasswordHash(PasswordUtils.hashPassword(request.getPassword()));
-        appUser.setInviteToken(null);
-        appUser.setTokenExpiry(null);
-        appUser.setEmailVerified(true);
-        appUser.setActive(true);
-        appUserRepository.save(appUser);
     }
 }

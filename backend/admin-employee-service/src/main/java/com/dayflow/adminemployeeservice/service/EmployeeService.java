@@ -6,9 +6,10 @@ import org.springframework.data.domain.Pageable;
 
 public interface EmployeeService {
     EmployeeResponse onboardEmployee(EmployeeOnboardRequest request);
-    EmployeeResponse updateEmployee(Long id, EmployeeUpdateRequest request);
-    EmployeeResponse getEmployeeById(Long id);
+    EmployeeResponse updateEmployee(String id, EmployeeUpdateRequest request);
+    EmployeeResponse getEmployeeById(String id);
     Page<EmployeeResponse> getEmployees(String firstName, String lastName, Long departmentId, Long designationId, Boolean isActive, Pageable pageable);
-    void updateEmployeeStatus(Long id, boolean active);
+    void updateEmployeeStatus(String id, boolean active);
     void setPassword(SetPasswordRequest request);
+    void signup(SignUpRequest request);
 }
